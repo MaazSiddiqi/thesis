@@ -1,0 +1,136 @@
+\documentclass[12pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{times}
+\usepackage{setspace}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage[numbers]{natbib}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    citecolor=black,
+    urlcolor=blue
+}
+
+\doublespacing
+
+\title{\textbf{Network-Aware Analysis of Distributed Machine Learning Paradigms: Federated Learning, Split Learning, and SplitFed Learning}\\[0.5em]
+\large Thesis Proposal (CS4490Z)
+}
+
+\author{
+Maaz Siddiqi\\
+Undergraduate Thesis -- CS4490Z\\
+Department of Computer Science\\
+Western University
+}
+
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{Structured Abstract}
+
+\textbf{Context and Motivation:} Distributed machine learning paradigms such as Federated Learning, Split Learning, and SplitFed Learning have emerged as promising approaches for collaborative model training across decentralized nodes. Each paradigm exhibits fundamentally different communication patterns. Federated Learning transmits full model updates per round, Split Learning exchanges intermediate activations on every forward and backward pass, and SplitFed Learning combines both mechanisms. Despite these architectural differences, existing evaluations overwhelmingly rely on theoretical communication cost metrics such as parameter counts and model sizes, overlooking real-world network effects including TCP overhead, congestion, packet loss, and competing traffic. At the same time, available network simulation tools are either commercial and closed-source or incapable of executing real ML training algorithms, creating a disconnect between network research and ML research. As these paradigms move closer to production deployment in domains such as healthcare and edge computing, this gap becomes increasingly consequential; paradigm selection guided solely by theoretical cost may lead to suboptimal or even incorrect choices once realistic network conditions are introduced.
+
+\textbf{Research Question:} How do realistic network conditions, such as bandwidth constraints, latency, and congestion, differentially impact the training performance, communication efficiency, and scalability of Federated Learning, Split Learning, and SplitFed Learning?
+
+\textbf{Principal Ideas:} This research proposes a Docker-based network emulation framework that enables the execution of real Federated Learning, Split Learning, and SplitFed Learning training algorithms across containerized clients connected by configurable virtual networks. Using Linux traffic control utilities, the framework allows researchers to impose realistic network conditions, including bandwidth limits, latency, and congestion, and measure their direct impact on training. By running actual ML algorithms rather than abstract simulations, the framework bridges the current disconnect between network emulation research and distributed ML evaluation. All three paradigms are evaluated under identical, controlled network scenarios, enabling a fair comparison across metrics including model convergence, wall-clock training time, and actual bandwidth consumption. The framework is designed to be open-source and reproducible, serving as a reusable tool for future network-aware ML research.
+
+\textbf{Research Methodology:} This research adopts a blended methodology combining system development with empirical experimentation. The system development component involves designing and implementing a Docker-based network emulation framework in which distributed ML clients operate as containers connected by configurable virtual networks shaped using Linux traffic control utilities. The empirical component involves conducting controlled experiments across Federated Learning, Split Learning, and SplitFed Learning using the HAM10000 dataset with a ResNet18 architecture. Network conditions including bandwidth, latency, and congestion are systematically varied while training performance, convergence behavior, wall-clock training time, actual bandwidth consumption, and scalability across increasing node counts are measured. All three paradigms are evaluated under identical network scenarios to ensure a fair and controlled comparison.
+
+\textbf{Anticipated Type of Results:} The anticipated results include a reusable, open-source Docker-based network emulation framework for evaluating distributed ML paradigms under realistic network conditions, and empirical findings comparing the performance of Federated Learning, Split Learning, and SplitFed Learning across a range of network scenarios. These findings will quantify how bandwidth constraints, latency, and congestion affect convergence rate, training time, communication overhead, and scalability for each paradigm.
+
+\textbf{Anticipated Novelty:} The novelty of this research lies in bridging the gap between network emulation and distributed ML evaluation, two fields that have largely operated in isolation. No existing open-source tool enables the execution of real distributed ML training algorithms under configurable, realistic network conditions. Additionally, while prior work has compared FL, SL, and SplitFed on theoretical communication costs, no study has evaluated their comparative performance under emulated real-world network scenarios including congestion and competing traffic.
+
+\textbf{Progress Thus Far:} A comprehensive literature review covering Federated Learning, Split Learning, and SplitFed Learning has been conducted, along with a survey of existing network simulation and emulation tools. Initial development of the Docker-based framework has begun, including validation that Linux traffic control utilities function correctly within the containerized environment. The HAM10000 dataset has been explored for suitability, and an existing open-source SplitFed codebase has been identified as a foundation for the ML implementations. The thesis proposal is currently being developed.
+
+\textbf{Anticipated Impact of Results:} This research is expected to provide researchers and practitioners with a practical, open-source tool for conducting network-aware evaluations of distributed ML paradigms. The empirical findings may inform more realistic paradigm selection for real-world deployments where network conditions significantly influence performance. The framework also establishes a foundation for future research into network-aware optimization of distributed ML systems.
+
+\textbf{Limitations:} Results are derived from a single dataset and model architecture, which may limit generalizability to other data modalities and network designs. While Docker-based network emulation provides more realistic conditions than theoretical analysis, it does not fully replicate the complexity of geographically distributed wide-area network deployments. Additionally, running all containers on a single host machine means they share CPU and RAM resources, which may introduce compute contention that influences training performance metrics, unlike real distributed deployments where each node has dedicated hardware. This shared resource constraint may also limit the number of clients that can be scaled in experiments.
+
+\section{Background and Related Work}
+
+Distributed collaborative machine learning (DCML) enables multiple participants to jointly train a model without sharing raw data. Rather than centralizing data from multiple sources, DCML follows a model-to-data approach in which the training process is distributed across participants while data remains local. This is particularly relevant in domains such as healthcare, finance, and edge computing, where data privacy regulations, communication costs, and competitive concerns make centralized data aggregation impractical or infeasible \cite{thapa2022}. The most prominent DCML approaches are Federated Learning, Split Learning, and the more recently proposed SplitFed Learning, each of which distributes the training process differently.
+
+Federated Learning (FL) is the most widely adopted DCML approach. In FL, a central server distributes a complete copy of the global model to all participating clients. Each client independently trains the model on its local data for a set number of local epochs, then sends its updated model parameters back to the server. The server aggregates these updates, typically using Federated Averaging (FedAvg), which computes a weighted average of the client updates to produce a new global model \cite{mcmahan2017}. This process repeats until convergence. Because all clients train in parallel, FL is time-efficient relative to sequential approaches. However, each communication round requires transmitting the full model to and from every client, resulting in significant per-round communication overhead that scales directly with model size \cite{thapa2022}. Additionally, FL requires each client to have sufficient computational resources to train the full model, which may be prohibitive for resource-constrained devices such as IoT sensors or mobile phones.
+
+Split Learning (SL) takes a fundamentally different approach by partitioning the model architecture at a designated cut layer. The layers before the cut layer form the client-side model, while the remaining layers form the server-side model. During training, a client performs a forward pass through its local layers and transmits the resulting activations, referred to as smashed data, to the server. The server then continues the forward pass, computes the loss, and performs backpropagation through the server-side layers before returning the gradients of the smashed data to the client, which completes backpropagation through its local layers \cite{vepakomma2018}. Because the server-side model is actively updated during each client's training step, clients must train sequentially in a relay-based fashion, with only one client engaging the server at a time. This sequential constraint causes training time to scale linearly with the number of clients. However, SL offers two advantages: per-transfer communication size is significantly smaller than in FL since only activations and gradients of the cut layer are exchanged rather than full model parameters, and model privacy is improved since no single party has access to the complete model \cite{thapa2022}.
+
+SplitFed Learning (SFL) is a hybrid approach that combines the model splitting of SL with the parallel training of FL \cite{thapa2022}. As in SL, the model is partitioned at a cut layer into client-side and server-side portions. However, unlike SL, all clients perform their client-side forward pass in parallel and send their smashed data to a main server simultaneously. The main server processes each client's smashed data through the server-side model independently, then aggregates the resulting server-side updates using FedAvg. Meanwhile, after each client completes backpropagation through its client-side layers, the updated client-side model weights are sent to a separate fed server, which aggregates them using FedAvg and distributes the averaged model back to all clients. This architecture eliminates the sequential bottleneck of SL while preserving the benefits of model splitting, including reduced client-side computation and improved model privacy. However, SFL introduces additional architectural complexity through its reliance on two servers, and its communication pattern involves both smashed data transfers to the main server and model weight transfers to the fed server.
+
+Several studies have compared these paradigms across various dimensions. Thapa et al. \cite{thapa2022} conducted the most comprehensive three-way comparison of FL, SL, SFLV1, and SFLV2 across four datasets and four model architectures, measuring test accuracy, communication cost (bytes uploaded and downloaded per client per global epoch), and training time per global epoch. Their results showed that SFL achieves similar accuracy to SL while being significantly faster due to parallel client training, and that communication efficiency of both SL and SFL improves over FL as the number of clients increases. However, all experiments were conducted on a high-performance computing cluster with InfiniBand networking, representing near-ideal network conditions. Singh et al. \cite{singh2019} provided a detailed theoretical comparison of the communication efficiency of SL and FL, demonstrating that increasing the number of clients or model size favors SL, while increasing data volume with fewer clients favors FL. This analysis, while valuable, was purely mathematical and did not account for real network behavior such as TCP overhead or congestion. Gao et al. \cite{gao2020} took a step closer to real-world evaluation by deploying FL and SL on Raspberry Pi devices and measuring training time, communication overhead, power consumption, and memory usage over a local area network. Their findings revealed that FL had significantly lower communication overhead than SL in IoT settings, and that neither paradigm could support large models on resource-constrained devices. While this work introduced real hardware and real networking, it was limited to a standard LAN with no degraded or configurable network conditions, and did not include SplitFed in the comparison.
+
+A common limitation across these studies is the treatment of network communication as either a theoretical abstraction or a fixed, uncontrolled variable. No existing work has systematically evaluated how varying, realistic network conditions such as bandwidth constraints, latency, and congestion differentially affect the training performance, communication efficiency, and scalability of FL, SL, and SplitFed. Furthermore, existing network simulation tools such as ns-3 or commercial alternatives are either closed-source or incapable of executing real ML training algorithms, while ML evaluation frameworks treat the network as transparent. This disconnect between network research and distributed ML evaluation represents a significant gap in the literature that this thesis aims to address.
+
+\section{Detailed Proposal}
+
+\subsection{Research Objectives}
+
+The goal of this research is to evaluate how realistic network conditions affect the comparative performance of Federated Learning, Split Learning, and SplitFed Learning by developing a Docker-based network emulation framework that enables controlled, reproducible experimentation.
+
+This thesis will investigate the following research questions:
+
+\begin{enumerate}
+    \item How do bandwidth constraints affect convergence rate, training time, and communication overhead for each paradigm?
+    \item How does network latency differentially impact FL, SL, and SplitFed given their fundamentally different communication patterns?
+    \item How does network congestion (competing traffic) affect the stability and performance of each paradigm?
+    \item How does each paradigm's performance scale as the number of participating clients increases under constrained network conditions?
+    \item To what extent do the theoretical communication cost advantages reported in prior work \cite{thapa2022, singh2019} hold under realistic network conditions?
+\end{enumerate}
+
+\subsection{Research Approach and Methodology}
+
+Several technical challenges motivate the design of this framework. First, no existing open-source tool combines realistic network emulation with the execution of real distributed ML training algorithms. Network simulators such as ns-3 can model complex topologies but cannot run actual ML workloads, while ML frameworks such as PyTorch support distributed training but treat the network as transparent. Second, the three paradigms under study exhibit fundamentally different communication patterns: FL transmits full models infrequently, SL transmits small activations frequently, and SplitFed communicates with two servers simultaneously. A fair comparison requires that all three paradigms operate under identical, precisely controlled network conditions. Third, running all participants as containers on a single host introduces shared CPU and memory contention, which must be considered when interpreting results.
+
+The framework is built on Docker, with each participant (clients and servers) running as an isolated container orchestrated using Docker Compose. A configuration file defines the experimental scenario, including the number of clients, the distributed ML paradigm to run, and the network conditions to apply. Docker virtual networks connect the containers, and Linux traffic control utilities (\texttt{tc} and \texttt{netem}) are applied to each container's network interface to impose configurable bandwidth limits, latency, and jitter. For congestion experiments specifically, additional containers running \texttt{iperf3} generate competing background traffic on the same virtual network, creating realistic TCP congestion where ML traffic must compete for available bandwidth. This dual approach allows for both controlled, static network experiments using \texttt{tc}/\texttt{netem} alone and dynamic congestion scenarios using \texttt{iperf3}. The ML implementations for FL, SL, and SplitFed are built on an existing open-source SplitFed codebase \cite{thapa2022} and adapted to run within the containerized environment. The same dataset partitioning, model architecture, and hyperparameters are maintained across all three paradigms to ensure that any observed differences in performance are attributable to the paradigm and network conditions rather than implementation variance.
+
+The framework is implemented in Python using PyTorch for model training and distributed communication. Docker and Docker Compose provide containerization and orchestration. Network shaping relies on \texttt{iproute2} (which provides the \texttt{tc} command) and the \texttt{netem} kernel module, both available within the Docker Desktop Linux VM. Competing traffic is generated using \texttt{iperf3}. Training metrics including loss, accuracy, and convergence are logged per round, while network-level metrics such as actual bytes transmitted and elapsed time are captured using standard Linux utilities. The HAM10000 skin lesion dataset is used with a ResNet18 architecture, consistent with the experimental setup used by Thapa et al. \cite{thapa2022}, enabling direct comparison of results under ideal versus degraded network conditions.
+
+The experimental design follows a controlled, single-variable approach in which one network parameter is varied at a time while others are held at baseline values. The baseline configuration represents ideal network conditions: 100 Mbps bandwidth, 1ms latency, and no competing traffic. Bandwidth experiments test values of 1, 10, 50, and 100 Mbps to simulate conditions ranging from severely constrained to unconstrained. Latency experiments test values of 1, 20, 50, 100, and 200ms, corresponding to local network, regional, cross-country, and intercontinental deployment scenarios. Congestion experiments introduce competing background traffic via \texttt{iperf3} at 0\%, 25\%, 50\%, and 75\% of the available bandwidth. Scalability experiments vary the number of participating clients across 2, 5, 10, and 20 nodes. For each experimental configuration, all three paradigms (FL, SL, and SplitFed) are evaluated under identical conditions. Each experiment is repeated a minimum of three times, and results are reported as mean values with standard deviation to account for variability. The primary metrics captured include model accuracy, convergence rate (rounds to target accuracy), wall-clock training time, and actual bytes transmitted across the network.
+
+Validation of the framework and results relies on three complementary strategies. First, a baseline replication experiment under ideal network conditions is compared against the results reported by Thapa et al. \cite{thapa2022} to verify that the containerized implementations of FL, SL, and SplitFed produce consistent accuracy and convergence behavior before introducing network degradation. Second, network conditions imposed by \texttt{tc} and \texttt{netem} are independently verified using standard tools such as \texttt{ping} and \texttt{iperf3} to confirm that the intended bandwidth, latency, and congestion levels are accurately applied. Third, all experiments are repeated a minimum of three times with results reported as mean and standard deviation to ensure statistical reliability.
+
+Several threats and challenges may affect the validity of this research. Running all containers on a single host machine means participants share CPU and memory resources, potentially introducing compute contention that does not exist in real distributed deployments. This contention may disproportionately affect paradigms with higher computational demands, and must be accounted for when interpreting timing results. Docker's virtual networking, while more realistic than theoretical analysis, does not fully capture the complexity of real wide-area network behavior including asymmetric routing, variable path characteristics, and multi-hop topologies. Additionally, results derived from a single dataset (HAM10000) and model architecture (ResNet18) may not generalize to other data modalities or network designs. Finally, container startup and initialization overhead could introduce noise in training time measurements, which will be mitigated by excluding the first round from timing calculations, consistent with the approach used by Thapa et al. \cite{thapa2022}.
+
+\section{Novelty and Impact}
+
+The anticipated novelty of this research stems from three contributions that collectively address the gap between network research and distributed ML evaluation. First, the Docker-based network emulation framework is, to the best of our knowledge, the first open-source tool that enables the execution of real FL, SL, and SplitFed training algorithms under configurable, realistic network conditions. Existing evaluations either operate under ideal network assumptions \cite{thapa2022}, rely on purely theoretical communication cost analysis \cite{singh2019}, or test on real hardware without degrading or controlling the network \cite{gao2020}. Second, the empirical comparison of all three paradigms under systematically varied network conditions (bandwidth, latency, congestion, and client count) is novel. Prior three-way comparisons have not accounted for real network effects, meaning this work may reveal performance dynamics that are invisible under ideal conditions, such as SL's sensitivity to latency due to its per-step communication pattern, or SplitFed's vulnerability to congestion given its reliance on two servers. Third, the controlled single-variable experimental design enables the isolation of specific network factors, providing fine-grained insight into which conditions favor which paradigm.
+
+In terms of research value, this work is expected to demonstrate that paradigm comparisons conducted under ideal network assumptions may not hold under realistic conditions, challenging existing findings and motivating future network-aware evaluation as a standard practice in distributed ML research. In terms of practical value, the empirical findings can inform paradigm selection for real-world deployments where network conditions vary, helping practitioners choose the most suitable approach for their specific environment. The framework itself serves as a reusable research tool that can be extended to evaluate additional paradigms, datasets, or network scenarios beyond those explored in this thesis.
+
+\bibliographystyle{plainnat}
+
+\begin{thebibliography}{5}
+
+\bibitem[Gao et~al.(2020)]{gao2020}
+Gao, Y., Kim, M., Abuadbba, S., Kim, Y., Thapa, C., Kim, K., Camtepe, S.~A., Kim, H., \& Nepal, S.
+\newblock End-to-End Evaluation of Federated Learning and Split Learning for Internet of Things.
+\newblock \emph{Proceedings of the 39th International Symposium on Reliable Distributed Systems (SRDS)}, 91--100, 2020.
+
+\bibitem[McMahan et~al.(2017)]{mcmahan2017}
+McMahan, H.~B., Moore, E., Ramage, D., Hampson, S., \& y~Arcas, B.~A.
+\newblock Communication-Efficient Learning of Deep Networks from Decentralized Data.
+\newblock \emph{Proceedings of the 20th International Conference on Artificial Intelligence and Statistics (AISTATS)}, 1273--1282, 2017.
+
+\bibitem[Singh et~al.(2019)]{singh2019}
+Singh, A., Vepakomma, P., Gupta, O., \& Raskar, R.
+\newblock Detailed Comparison of Communication Efficiency of Split Learning and Federated Learning.
+\newblock \emph{arXiv preprint arXiv:1909.09145}, 2019.
+
+\bibitem[Thapa et~al.(2022)]{thapa2022}
+Thapa, C., Mahawaga~Arachchige, P.~C., Camtepe, S., \& Sun, L.
+\newblock SplitFed: When Federated Learning Meets Split Learning.
+\newblock \emph{Proceedings of the AAAI Conference on Artificial Intelligence}, 36(8), 8485--8493, 2022.
+
+\bibitem[Vepakomma et~al.(2018)]{vepakomma2018}
+Vepakomma, P., Gupta, O., Swedish, T., \& Raskar, R.
+\newblock Split Learning for Health: Distributed Deep Learning without Sharing Raw Patient Data.
+\newblock \emph{arXiv preprint arXiv:1812.00564}, 2018.
+
+\end{thebibliography}
+
+\end{document}
