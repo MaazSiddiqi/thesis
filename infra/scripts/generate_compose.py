@@ -48,6 +48,7 @@ def build_compose(config: dict) -> dict:
         "cap_add": ["NET_ADMIN"],
         "environment": [
             "ROLE=server",
+            f"EXPERIMENT_NAME={name}",
             "FL_SERVER_HOST=0.0.0.0",
             f"FL_SERVER_PORT={port}",
             f"NUM_CLIENTS={num_clients}",
@@ -73,6 +74,7 @@ def build_compose(config: dict) -> dict:
 
         env = [
             "ROLE=client",
+            f"EXPERIMENT_NAME={name}",
             f"CLIENT_ID={cid}",
             f"FL_SERVER_URL=http://fl-server:{port}",
             f"FL_ROUNDS={rounds}",

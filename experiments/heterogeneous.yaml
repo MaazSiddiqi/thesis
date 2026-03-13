@@ -14,16 +14,16 @@ server:
 clients:
   - id: 1
     network:
-      bandwidth: "50mbit"
+      bandwidth: "100mbit"
       latency: "5ms"
       loss: "0%"
   - id: 2
     network:
-      bandwidth: "50mbit"
+      bandwidth: "100mbit"
       latency: "5ms"
       loss: "1%"
   - id: 3
     network:
-      bandwidth: "50mbit"
+      bandwidth: "100mbit"
       latency: "5ms"
       loss: "0%"

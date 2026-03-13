@@ -29,6 +29,8 @@ def main():
     parser.add_argument("--num-classes", type=int, default=7)
     args = parser.parse_args()
 
+    experiment_name = os.environ.get("EXPERIMENT_NAME", "unknown")
+
     log.info("Building ResNet18 with %d classes", args.num_classes)
     model = build_resnet18(num_classes=args.num_classes)
 
@@ -42,12 +44,28 @@ def main():
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
-    log.info("Starting FL server on %s:%d (expecting %d clients, %d rounds)",
-             args.host, args.port, args.num_clients, args.num_rounds)
+    log.info(
+        "Experiment=%s Starting FL server on %s:%d (expecting %d clients, %d rounds)",
+        experiment_name,
+        args.host,
+        args.port,
+        args.num_clients,
+        args.num_rounds,
+    )
     transport.start()
 
     # Block until all rounds are aggregated (or a shutdown signal is received).
     fl_server.done_event.wait()
+    # Give any in-flight /round_status polls a brief chance to complete so
+    # clients can fetch the final model and log their summaries.
+    import time as _time
+    _time.sleep(2.0)
+    log.info(
+        "Experiment=%s Summary (clients=%d, rounds=%d)",
+        experiment_name,
+        args.num_clients,
+        args.num_rounds,
+    )
     fl_server.log_summary()
     log.info("All %d rounds complete. Shutting down.", args.num_rounds)
     transport.stop()

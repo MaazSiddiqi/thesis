@@ -64,6 +64,8 @@ def main():
                         help="Use synthetic data for smoke testing (default for phase-01)")
     args = parser.parse_args()
 
+    experiment_name = os.environ.get("EXPERIMENT_NAME", "unknown")
+
     # Inject client_id into log format
     old_factory = logging.getLogRecordFactory()
     def record_factory(*a, **kw):
@@ -72,12 +74,20 @@ def main():
         return record
     logging.setLogRecordFactory(record_factory)
 
-    log.info("Client %d starting, server=%s, rounds=%d", args.client_id, args.server_url, args.rounds)
+    log.info(
+        "Experiment=%s Client %d starting, server=%s, rounds=%d",
+        experiment_name,
+        args.client_id,
+        args.server_url,
+        args.rounds,
+    )
 
     wait_for_server(args.server_url)
 
     collector = StatsCollector()
     transport = HTTPClientTransport(server_url=args.server_url, stats=collector)
+
+    had_error = False
 
     train_loader, test_loader = _make_synthetic_loaders()
 
@@ -94,27 +104,48 @@ def main():
 
     for rnd in range(args.rounds):
         collector.start_round(rnd)
+        try:
+            log.info("Round %d: fetching global model", rnd)
+            global_sd = transport.get_global_model()
+            model.load_state_dict(global_sd)
 
-        log.info("Round %d: fetching global model", rnd)
-        global_sd = transport.get_global_model()
-        model.load_state_dict(global_sd)
+            log.info("Round %d: training locally", rnd)
+            train_start = time.monotonic()
+            updated_sd, train_loss, train_acc = trainer.train(model)
+            collector.record_train((time.monotonic() - train_start) * 1000)
+            log.info("Round %d: train loss=%.4f acc=%.2f%%", rnd, train_loss, train_acc)
 
-        log.info("Round %d: training locally", rnd)
-        train_start = time.monotonic()
-        updated_sd, train_loss, train_acc = trainer.train(model)
-        collector.record_train((time.monotonic() - train_start) * 1000)
-        log.info("Round %d: train loss=%.4f acc=%.2f%%", rnd, train_loss, train_acc)
+            log.info("Round %d: submitting update to server", rnd)
+            new_global_sd = transport.submit_update(args.client_id, updated_sd)
+            model.load_state_dict(new_global_sd)
 
-        log.info("Round %d: submitting update to server", rnd)
-        new_global_sd = transport.submit_update(args.client_id, updated_sd)
-        model.load_state_dict(new_global_sd)
+            eval_loss, eval_acc = trainer.evaluate(model)
+            log.info("Round %d: eval  loss=%.4f acc=%.2f%%", rnd, eval_loss, eval_acc)
+        except Exception as exc:
+            had_error = True
+            log.error("Round %d: error during submit/eval (%s). Stopping early.", rnd, exc)
+            break
+        finally:
+            collector.finish_round()
 
-        eval_loss, eval_acc = trainer.evaluate(model)
-        log.info("Round %d: eval  loss=%.4f acc=%.2f%%", rnd, eval_loss, eval_acc)
+    tc_bw = os.environ.get("TC_BANDWIDTH", "none")
+    tc_lat = os.environ.get("TC_LATENCY", "none")
+    tc_loss = os.environ.get("TC_LOSS", "none")
 
-        collector.finish_round()
+    if had_error:
+        log.info("Experiment=%s Client %d exiting early due to error.", experiment_name, args.client_id)
+    else:
+        log.info("Experiment=%s Client %d finished %d rounds", experiment_name, args.client_id, args.rounds)
 
-    log.info("Client %d finished %d rounds", args.client_id, args.rounds)
+    log.info(
+        "Experiment=%s Client %d config: rounds=%d, bandwidth=%s, latency=%s, loss=%s",
+        experiment_name,
+        args.client_id,
+        args.rounds,
+        tc_bw,
+        tc_lat,
+        tc_loss,
+    )
     collector.log_summary(args.client_id, log)
 
 
