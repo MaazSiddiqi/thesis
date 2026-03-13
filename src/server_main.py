@@ -1,9 +1,9 @@
 """FL Server entrypoint — runs inside the fl-server container.
 
 Usage:
-    python -m src.server_main [--host 0.0.0.0] [--port 8000] [--num-clients 2]
+    python -m src.server_main [--host 0.0.0.0] [--port 8000] [--num-clients 2] [--num-rounds 1]
 
-See docs/phase-01/architecture.md (FL Server).
+See docs/architecture.md (FL Server).
 """
 
 import argparse
@@ -25,28 +25,32 @@ def main():
     parser.add_argument("--host", default=os.environ.get("FL_SERVER_HOST", "0.0.0.0"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("FL_SERVER_PORT", "8000")))
     parser.add_argument("--num-clients", type=int, default=int(os.environ.get("NUM_CLIENTS", "2")))
+    parser.add_argument("--num-rounds", type=int, default=int(os.environ.get("FL_ROUNDS", "1")))
     parser.add_argument("--num-classes", type=int, default=7)
     args = parser.parse_args()
 
     log.info("Building ResNet18 with %d classes", args.num_classes)
     model = build_resnet18(num_classes=args.num_classes)
 
-    fl_server = FLServer(model=model, num_clients=args.num_clients)
+    fl_server = FLServer(model=model, num_clients=args.num_clients, num_rounds=args.num_rounds)
     transport = HTTPServerTransport(fl_server, host=args.host, port=args.port)
 
     def shutdown(sig, frame):
         log.info("Shutting down...")
-        transport.stop()
-        sys.exit(0)
+        fl_server.done_event.set()
 
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
-    log.info("Starting FL server on %s:%d (expecting %d clients)", args.host, args.port, args.num_clients)
+    log.info("Starting FL server on %s:%d (expecting %d clients, %d rounds)",
+             args.host, args.port, args.num_clients, args.num_rounds)
     transport.start()
 
-    # Keep main thread alive
-    signal.pause()
+    # Block until all rounds are aggregated (or a shutdown signal is received).
+    fl_server.done_event.wait()
+    fl_server.log_summary()
+    log.info("All %d rounds complete. Shutting down.", args.num_rounds)
+    transport.stop()
 
 
 if __name__ == "__main__":

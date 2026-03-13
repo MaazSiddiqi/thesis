@@ -134,15 +134,92 @@ docker compose -f infra/compose.yml --profile network-test down
 docker compose -f infra/compose.yml down
 ```
 
+## 8. Run an Experiment (Phase 2)
+
+Phase 2 adds per-client network shaping and a stats summary. Instead of the hand-written `compose.yml`, experiments are driven by a YAML config.
+
+### One-command run
+
+```bash
+python infra/scripts/run_experiment.py experiments/heterogeneous.yaml
+```
+
+This generates `infra/compose.generated.yml`, builds the image (if needed), and runs all containers. When the clients finish you will see a stats table in each client's logs:
+
+```
+[CLIENT 2] ── Network Stats Summary ────────────────────────────────────────
+[CLIENT 2]  round  get_model_ms  submit_ms  train_ms  submit_bytes  poll_count
+[CLIENT 2]      0          32.1      890.2    3210.0      44040012           3
+[CLIENT 2]      1          28.4      820.9    3198.3      44040012           2
+[CLIENT 2] ────────────────────────────────────────────────────────────────
+```
+
+### Manual steps (if you prefer)
+
+```bash
+# Step 1: generate compose file from config
+python infra/scripts/generate_compose.py experiments/heterogeneous.yaml
+# → infra/compose.generated.yml
+
+# Step 2: build (first time or after requirements change)
+docker compose -f infra/compose.generated.yml build
+
+# Step 3: run
+docker compose -f infra/compose.generated.yml up
+```
+
+### Experiment config format
+
+```yaml
+experiment:
+  name: "heterogeneous"
+  rounds: 3
+
+server:
+  port: 8000
+
+clients:
+  - id: 1
+    network:
+      bandwidth: "10mbit"
+      latency: "10ms"
+      loss: "0%"
+  - id: 2
+    network:
+      bandwidth: "1mbit"
+      latency: "100ms"
+      loss: "1%"
+  - id: 3
+    network: {}          # no shaping
+```
+
+Omit any network key (or use `network: {}`) to leave that parameter unshapped. See `experiments/baseline.yaml` for a no-shaping reference run.
+
+### How network shaping is applied
+
+The `infra/scripts/entrypoint.sh` script runs before Python inside each client container. If `TC_BANDWIDTH`, `TC_LATENCY`, or `TC_LOSS` env vars are present (injected by the compose generator), it runs:
+
+```bash
+tc qdisc add dev eth0 root netem delay <latency> rate <bandwidth> loss <loss>
+```
+
+then hands off to the Python process via `exec "$@"`.
+
+### Cleanup
+
+```bash
+docker compose -f infra/compose.generated.yml down
+```
+
+---
+
 ## Known Limitations
 
 - Smoke tests use synthetic data; full HAM10000 training not yet wired to containers.
-- Fixed at 2 clients in Compose; arbitrary N-client orchestration is Phase 2.
-- No network statistics collection yet (Phase 2).
+- Stats are logged to terminal only; CSV/JSON export is Phase 3.
 - `signal.pause()` in server_main.py is Unix-only.
 
-## What's Next (Phase 2)
+## What's Next (Phase 3)
 
-- Arbitrary N-client Compose generation or dynamic scaling.
-- Experiment configuration file (network params, client count, rounds).
-- Network statistics collection and reporting (bytes transferred, wall-clock time, throughput per round).
+- Export stats to CSV/JSON files for cross-experiment analysis.
+- Run an experiment matrix (e.g. vary bandwidth 1–100 Mbit, measure round time).

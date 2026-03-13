@@ -16,8 +16,9 @@ import time
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.models.resnet import build_resnet18
 from src.fl.client_core import LocalTrainer
+from src.models.resnet import build_resnet18
+from src.stats.collector import StatsCollector
 from src.transport.http_adapter import HTTPClientTransport
 from src.transport.serialization import bytes_to_state_dict
 
@@ -75,7 +76,8 @@ def main():
 
     wait_for_server(args.server_url)
 
-    transport = HTTPClientTransport(server_url=args.server_url)
+    collector = StatsCollector()
+    transport = HTTPClientTransport(server_url=args.server_url, stats=collector)
 
     train_loader, test_loader = _make_synthetic_loaders()
 
@@ -91,12 +93,16 @@ def main():
     model = build_resnet18(num_classes=args.num_classes)
 
     for rnd in range(args.rounds):
+        collector.start_round(rnd)
+
         log.info("Round %d: fetching global model", rnd)
         global_sd = transport.get_global_model()
         model.load_state_dict(global_sd)
 
         log.info("Round %d: training locally", rnd)
+        train_start = time.monotonic()
         updated_sd, train_loss, train_acc = trainer.train(model)
+        collector.record_train((time.monotonic() - train_start) * 1000)
         log.info("Round %d: train loss=%.4f acc=%.2f%%", rnd, train_loss, train_acc)
 
         log.info("Round %d: submitting update to server", rnd)
@@ -106,7 +112,10 @@ def main():
         eval_loss, eval_acc = trainer.evaluate(model)
         log.info("Round %d: eval  loss=%.4f acc=%.2f%%", rnd, eval_loss, eval_acc)
 
+        collector.finish_round()
+
     log.info("Client %d finished %d rounds", args.client_id, args.rounds)
+    collector.log_summary(args.client_id, log)
 
 
 if __name__ == "__main__":

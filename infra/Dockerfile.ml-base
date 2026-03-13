@@ -18,5 +18,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
-# Default: keep running so compose can exec validation or override with server/client
-CMD ["sleep", "infinity"]
+COPY infra/scripts/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]

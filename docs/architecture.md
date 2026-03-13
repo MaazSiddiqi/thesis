@@ -50,7 +50,17 @@ Applied inside containers via `tc`/`netem` (requires `NET_ADMIN` capability). Sc
 
 ### Network Statistics (Phase 2)
 
-Each container will capture bytes sent/received, per-round wall-clock time, and throughput. These are collected after training and output as a report (CSV or JSON).
+Each client container captures bytes sent/received and wall-clock time per HTTP call via `StatsCollector` (`src/stats/collector.py`). After all rounds complete the client logs a summary table to stdout:
+
+```
+── Network Stats Summary ────────────────────────────────────────────────
+ round  get_model_ms  submit_ms  train_ms  submit_bytes  poll_count
+     0          32.1      410.5    3210.0      44040012           1
+     1          28.4      890.2    3198.3      44040012           3
+─────────────────────────────────────────────────────────────────────────
+```
+
+High `submit_ms` on a client with constrained bandwidth directly quantifies the network's impact on FL round time.
 
 ## Data and Model
 
@@ -60,8 +70,9 @@ Each container will capture bytes sent/received, per-round wall-clock time, and 
 
 ## File Layout
 
-- `src/` — FL core, data, model, transport interfaces, HTTP adapter.
-- `infra/` — Dockerfiles, Compose, network shaping and validation scripts.
+- `src/` — FL core, data, model, transport interfaces, HTTP adapter, stats collector.
+- `infra/` — Dockerfiles, Compose, entrypoint script, network shaping and validation scripts.
+- `experiments/` — YAML experiment configs (one file per experiment run).
 - `tests/` — Unit and integration tests.
 - `docs/` — This documentation set.
 

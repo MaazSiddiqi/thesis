@@ -1,0 +1,14 @@
+experiment:
+  name: "baseline"
+  rounds: 3
+
+server:
+  port: 8000
+
+clients:
+  - id: 1
+    network: {}
+  - id: 2
+    network: {}
+  - id: 3
+    network: {}

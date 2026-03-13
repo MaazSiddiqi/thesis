@@ -73,7 +73,7 @@ def _run_client(client_id: int, server_url: str, model_cls, results: dict, error
 
 def test_one_fl_round():
     model = _TinyModel()
-    fl_server = FLServer(model=model, num_clients=NUM_CLIENTS)
+    fl_server = FLServer(model=model, num_clients=NUM_CLIENTS, num_rounds=1)
     transport = HTTPServerTransport(fl_server, host="127.0.0.1", port=PORT)
 
     transport.start()

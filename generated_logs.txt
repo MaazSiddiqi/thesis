@@ -1,0 +1,341 @@
+fl-server  | [ENTRYPOINT] No network shaping configured. Starting directly.
+fl-server  | [ENTRYPOINT] Starting: python -m src.server_main
+fl-server  | 2026-03-13 17:07:37,025 [SERVER] Building ResNet18 with 7 classes
+fl-server  | 2026-03-13 17:07:37,177 [SERVER] Starting FL server on 0.0.0.0:8000 (expecting 3 clients, 3 rounds)
+fl-server  | 2026-03-13 17:07:37,178 [SERVER] HTTP server starting on 0.0.0.0:8000
+fl-server  | 2026-03-13 17:07:55,366 [SERVER] Round 0: received update from client 1 (1/3)
+fl-server  | 2026-03-13 17:07:55,386 [SERVER] Round 0: received update from client 3 (2/3)
+fl-server  | 2026-03-13 17:08:00,274 [SERVER] Round 0: received update from client 2 (3/3)
+fl-server  | 2026-03-13 17:08:00,274 [SERVER] Round 0: aggregating 3 updates (round took 4908 ms)
+fl-server  | 2026-03-13 17:08:12,971 [SERVER] Round 1: received update from client 1 (1/3)
+fl-server  | 2026-03-13 17:08:12,990 [SERVER] Round 1: received update from client 3 (2/3)
+fl-server  | 2026-03-13 17:08:15,086 [SERVER] Round 1: received update from client 2 (3/3)
+fl-server  | 2026-03-13 17:08:15,086 [SERVER] Round 1: aggregating 3 updates (round took 2115 ms)
+fl-server  | 2026-03-13 17:08:27,831 [SERVER] Round 2: received update from client 3 (1/3)
+fl-server  | 2026-03-13 17:08:27,869 [SERVER] Round 2: received update from client 1 (2/3)
+fl-server  | 2026-03-13 17:08:33,178 [SERVER] Round 2: received update from client 2 (3/3)
+fl-server  | 2026-03-13 17:08:33,179 [SERVER] Round 2: aggregating 3 updates (round took 5348 ms)
+fl-server  | 2026-03-13 17:08:33,206 [SERVER] ── Server Round Stats Summary ───────────────
+fl-server  | 2026-03-13 17:08:33,206 [SERVER]  round     duration_ms
+fl-server  | 2026-03-13 17:08:33,206 [SERVER]      0          4908.1
+fl-server  | 2026-03-13 17:08:33,206 [SERVER]      1          2115.3
+fl-server  | 2026-03-13 17:08:33,206 [SERVER]      2          5347.6
+fl-server  | 2026-03-13 17:08:33,206 [SERVER] ────────────────────────────────────────────
+fl-server  | 2026-03-13 17:08:33,206 [SERVER] All 3 rounds complete. Shutting down.
+fl-client-2  | [ENTRYPOINT] Applying network shaping: bandwidth=50mbit latency=5ms loss=1%
+fl-client-2  | [ENTRYPOINT] tc qdisc add dev eth0 root netem delay 5ms rate 50mbit loss 1%
+fl-client-2  | [ENTRYPOINT] Network shaping applied.
+fl-client-2  | [ENTRYPOINT] Starting: python -m src.client_main --synthetic
+fl-client-2  | 2026-03-13 17:07:42,817 [CLIENT 2] Client 2 starting, server=http://fl-server:8000, rounds=3
+fl-client-2  | 2026-03-13 17:07:42,851 [CLIENT 2] HTTP Request: GET http://fl-server:8000/health "HTTP/1.1 200 OK"
+fl-client-2  | 2026-03-13 17:07:43,027 [CLIENT 2] Round 0: fetching global model
+fl-client-2  | 2026-03-13 17:07:43,150 [CLIENT 2] HTTP Request: GET http://fl-server:8000/model "HTTP/1.1 200 OK"
+fl-client-2  | 2026-03-13 17:07:43,364 [CLIENT 2] Round 0: training locally
+fl-client-2  | 2026-03-13 17:07:47,806 [CLIENT 2] Round 0: train loss=2.1192 acc=7.81%
+fl-client-2  | 2026-03-13 17:07:47,806 [CLIENT 2] Round 0: submitting update to server
+fl-client-2  | 2026-03-13 17:08:00,310 [CLIENT 2] HTTP Request: POST http://fl-server:8000/update/2 "HTTP/1.1 200 OK"
+fl-client-2  | 2026-03-13 17:08:00,328 [CLIENT 2] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-2  | 2026-03-13 17:08:00,368 [CLIENT 2] HTTP Request: GET http://fl-server:8000/model "HTTP/1.1 200 OK"
+fl-client-2  | 2026-03-13 17:08:00,641 [CLIENT 2] Round 0: eval  loss=1.9120 acc=32.81%
+fl-client-2  | 2026-03-13 17:08:00,641 [CLIENT 2] Round 1: fetching global model
+fl-client-2  | 2026-03-13 17:08:00,691 [CLIENT 2] HTTP Request: GET http://fl-server:8000/model "HTTP/1.1 200 OK"
+fl-client-2  | 2026-03-13 17:08:00,994 [CLIENT 2] Round 1: training locally
+fl-client-2  | 2026-03-13 17:08:04,441 [CLIENT 2] Round 1: train loss=1.5208 acc=57.81%
+fl-client-2  | 2026-03-13 17:08:04,441 [CLIENT 2] Round 1: submitting update to server
+fl-client-2  | 2026-03-13 17:08:15,122 [CLIENT 2] HTTP Request: POST http://fl-server:8000/update/2 "HTTP/1.1 200 OK"
+fl-client-2  | 2026-03-13 17:08:15,142 [CLIENT 2] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-2  | 2026-03-13 17:08:15,193 [CLIENT 2] HTTP Request: GET http://fl-server:8000/model "HTTP/1.1 200 OK"
+fl-client-2  | 2026-03-13 17:08:16,040 [CLIENT 2] Round 1: eval  loss=1.9154 acc=28.12%
+fl-client-2  | 2026-03-13 17:08:16,041 [CLIENT 2] Round 2: fetching global model
+fl-client-2  | 2026-03-13 17:08:16,084 [CLIENT 2] HTTP Request: GET http://fl-server:8000/model "HTTP/1.1 200 OK"
+fl-client-2  | 2026-03-13 17:08:16,249 [CLIENT 2] Round 2: training locally
+fl-client-2  | 2026-03-13 17:08:20,271 [CLIENT 2] Round 2: train loss=1.0479 acc=90.62%
+fl-client-2  | 2026-03-13 17:08:20,271 [CLIENT 2] Round 2: submitting update to server
+fl-client-2  | 2026-03-13 17:08:33,207 [CLIENT 2] HTTP Request: POST http://fl-server:8000/update/2 "HTTP/1.1 200 OK"
+fl-client-2  | Traceback (most recent call last):
+fl-client-2  |   File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+fl-client-2  |     yield
+fl-client-2  |   File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 250, in handle_request
+fl-client-2  |     resp = self._pool.handle_request(req)
+fl-client-2  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 256, in handle_request
+fl-client-2  |     raise exc from None
+fl-client-2  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 236, in handle_request
+fl-client-2  |     response = connection.handle_request(
+fl-client-2  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 101, in handle_request
+fl-client-2  |     raise exc
+fl-client-2  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 78, in handle_request
+fl-client-2  |     stream = self._connect(request)
+fl-client-2  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 124, in _connect
+fl-client-2  |     stream = self._network_backend.connect_tcp(**kwargs)
+fl-client-2  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_backends/sync.py", line 207, in connect_tcp
+fl-client-2  |     with map_exceptions(exc_map):
+fl-client-2  |   File "/usr/local/lib/python3.10/contextlib.py", line 153, in __exit__
+fl-client-2  |     self.gen.throw(typ, value, traceback)
+fl-client-2  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+fl-client-2  |     raise to_exc(exc) from exc
+fl-client-2  | httpcore.ConnectError: [Errno 111] Connection refused
+fl-client-2  | 
+fl-client-2  | The above exception was the direct cause of the following exception:
+fl-client-2  | 
+fl-client-2  | Traceback (most recent call last):
+fl-client-2  |   File "/usr/local/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+fl-client-2  |     return _run_code(code, main_globals, None,
+fl-client-2  |   File "/usr/local/lib/python3.10/runpy.py", line 86, in _run_code
+fl-client-2  |     exec(code, run_globals)
+fl-client-2  |   File "/app/src/client_main.py", line 122, in <module>
+fl-client-2  |     main()
+fl-client-2  |   File "/app/src/client_main.py", line 109, in main
+fl-client-2  |     new_global_sd = transport.submit_update(args.client_id, updated_sd)
+fl-client-2  |   File "/app/src/transport/http_adapter.py", line 143, in submit_update
+fl-client-2  |     status = httpx.get(f"{self.server_url}/round_status", timeout=10).json()
+fl-client-2  |   File "/usr/local/lib/python3.10/site-packages/httpx/_api.py", line 195, in get
+fl-client-2  |     return request(
+fl-client-2  |   File "/usr/local/lib/python3.10/site-packages/httpx/_api.py", line 109, in request
+fl-client-2  |     return client.request(
+fl-client-2  |   File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 825, in request
+fl-client-2  |     return self.send(request, auth=auth, follow_redirects=follow_redirects)
+fl-client-2  |   File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 914, in send
+fl-client-2  |     response = self._send_handling_auth(
+fl-client-2  |   File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+fl-client-2  |     response = self._send_handling_redirects(
+fl-client-2  |   File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+fl-client-2  |     response = self._send_single_request(request)
+fl-client-2  |   File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 1014, in _send_single_request
+fl-client-2  |     response = transport.handle_request(request)
+fl-client-2  |   File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 249, in handle_request
+fl-client-2  |     with map_httpcore_exceptions():
+fl-client-2  |   File "/usr/local/lib/python3.10/contextlib.py", line 153, in __exit__
+fl-client-2  |     self.gen.throw(typ, value, traceback)
+fl-client-2  |   File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+fl-client-2  |     raise mapped_exc(message) from exc
+fl-client-2  | httpx.ConnectError: [Errno 111] Connection refused
+fl-client-3  | [ENTRYPOINT] Applying network shaping: bandwidth=50mbit latency=5ms loss=0%
+fl-client-3  | [ENTRYPOINT] tc qdisc add dev eth0 root netem delay 5ms rate 50mbit loss 0%
+fl-client-3  | [ENTRYPOINT] Network shaping applied.
+fl-client-3  | [ENTRYPOINT] Starting: python -m src.client_main --synthetic
+fl-client-3  | 2026-03-13 17:07:42,812 [CLIENT 3] Client 3 starting, server=http://fl-server:8000, rounds=3
+fl-client-3  | 2026-03-13 17:07:42,852 [CLIENT 3] HTTP Request: GET http://fl-server:8000/health "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:07:43,026 [CLIENT 3] Round 0: fetching global model
+fl-client-3  | 2026-03-13 17:07:43,149 [CLIENT 3] HTTP Request: GET http://fl-server:8000/model "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:07:43,436 [CLIENT 3] Round 0: training locally
+fl-client-3  | 2026-03-13 17:07:47,798 [CLIENT 3] Round 0: train loss=2.1101 acc=12.50%
+fl-client-3  | 2026-03-13 17:07:47,798 [CLIENT 3] Round 0: submitting update to server
+fl-client-3  | 2026-03-13 17:07:55,387 [CLIENT 3] HTTP Request: POST http://fl-server:8000/update/3 "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:07:55,406 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:07:55,930 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:07:56,450 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:07:56,983 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:07:57,512 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:07:58,047 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:07:58,578 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:07:59,108 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:07:59,636 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:00,167 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:00,690 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:00,742 [CLIENT 3] HTTP Request: GET http://fl-server:8000/model "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:01,696 [CLIENT 3] Round 0: eval  loss=1.9030 acc=34.38%
+fl-client-3  | 2026-03-13 17:08:01,696 [CLIENT 3] Round 1: fetching global model
+fl-client-3  | 2026-03-13 17:08:01,753 [CLIENT 3] HTTP Request: GET http://fl-server:8000/model "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:01,958 [CLIENT 3] Round 1: training locally
+fl-client-3  | 2026-03-13 17:08:05,404 [CLIENT 3] Round 1: train loss=1.5111 acc=56.25%
+fl-client-3  | 2026-03-13 17:08:05,404 [CLIENT 3] Round 1: submitting update to server
+fl-client-3  | 2026-03-13 17:08:12,991 [CLIENT 3] HTTP Request: POST http://fl-server:8000/update/3 "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:13,009 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:13,538 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:14,067 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:14,595 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:15,123 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:15,178 [CLIENT 3] HTTP Request: GET http://fl-server:8000/model "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:16,001 [CLIENT 3] Round 1: eval  loss=1.8891 acc=28.12%
+fl-client-3  | 2026-03-13 17:08:16,001 [CLIENT 3] Round 2: fetching global model
+fl-client-3  | 2026-03-13 17:08:16,038 [CLIENT 3] HTTP Request: GET http://fl-server:8000/model "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:16,206 [CLIENT 3] Round 2: training locally
+fl-client-3  | 2026-03-13 17:08:20,221 [CLIENT 3] Round 2: train loss=1.0058 acc=87.50%
+fl-client-3  | 2026-03-13 17:08:20,221 [CLIENT 3] Round 2: submitting update to server
+fl-client-3  | 2026-03-13 17:08:27,832 [CLIENT 3] HTTP Request: POST http://fl-server:8000/update/3 "HTTP/1.1 200 OK"
+fl-client-1  | [ENTRYPOINT] Applying network shaping: bandwidth=50mbit latency=5ms loss=0%
+fl-client-1  | [ENTRYPOINT] tc qdisc add dev eth0 root netem delay 5ms rate 50mbit loss 0%
+fl-client-1  | [ENTRYPOINT] Network shaping applied.
+fl-client-1  | [ENTRYPOINT] Starting: python -m src.client_main --synthetic
+fl-client-1  | 2026-03-13 17:07:42,814 [CLIENT 1] Client 1 starting, server=http://fl-server:8000, rounds=3
+fl-client-1  | 2026-03-13 17:07:42,850 [CLIENT 1] HTTP Request: GET http://fl-server:8000/health "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:07:43,027 [CLIENT 1] Round 0: fetching global model
+fl-client-3  | 2026-03-13 17:08:27,870 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:28,399 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:28,930 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:29,462 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:29,994 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:30,535 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:31,068 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:31,601 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:32,130 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | 2026-03-13 17:08:32,660 [CLIENT 3] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  | Traceback (most recent call last):
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+fl-client-3  |     yield
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 250, in handle_request
+fl-client-3  |     resp = self._pool.handle_request(req)
+fl-client-1  | 2026-03-13 17:07:43,149 [CLIENT 1] HTTP Request: GET http://fl-server:8000/model "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:07:43,378 [CLIENT 1] Round 0: training locally
+fl-client-1  | 2026-03-13 17:07:47,784 [CLIENT 1] Round 0: train loss=2.0098 acc=10.94%
+fl-client-1  | 2026-03-13 17:07:47,784 [CLIENT 1] Round 0: submitting update to server
+fl-client-1  | 2026-03-13 17:07:55,368 [CLIENT 1] HTTP Request: POST http://fl-server:8000/update/1 "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:07:55,389 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:07:55,921 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:07:56,443 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:07:56,975 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:07:57,505 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:07:58,040 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:07:58,569 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:07:59,101 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:07:59,630 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:00,159 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:00,679 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:00,725 [CLIENT 1] HTTP Request: GET http://fl-server:8000/model "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:01,693 [CLIENT 1] Round 0: eval  loss=1.8827 acc=32.81%
+fl-client-1  | 2026-03-13 17:08:01,693 [CLIENT 1] Round 1: fetching global model
+fl-client-1  | 2026-03-13 17:08:01,753 [CLIENT 1] HTTP Request: GET http://fl-server:8000/model "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:01,948 [CLIENT 1] Round 1: training locally
+fl-client-1  | 2026-03-13 17:08:05,387 [CLIENT 1] Round 1: train loss=1.4258 acc=68.75%
+fl-client-1  | 2026-03-13 17:08:05,387 [CLIENT 1] Round 1: submitting update to server
+fl-client-1  | 2026-03-13 17:08:12,973 [CLIENT 1] HTTP Request: POST http://fl-server:8000/update/1 "HTTP/1.1 200 OK"
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 256, in handle_request
+fl-client-3  |     raise exc from None
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 236, in handle_request
+fl-client-3  |     response = connection.handle_request(
+fl-client-1  | 2026-03-13 17:08:12,993 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:13,525 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:14,054 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:14,586 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:15,123 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:15,178 [CLIENT 1] HTTP Request: GET http://fl-server:8000/model "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:16,038 [CLIENT 1] Round 1: eval  loss=1.8940 acc=17.19%
+fl-client-1  | 2026-03-13 17:08:16,039 [CLIENT 1] Round 2: fetching global model
+fl-client-1  | 2026-03-13 17:08:16,084 [CLIENT 1] HTTP Request: GET http://fl-server:8000/model "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:16,372 [CLIENT 1] Round 2: training locally
+fl-client-1  | 2026-03-13 17:08:20,300 [CLIENT 1] Round 2: train loss=0.9834 acc=96.88%
+fl-client-1  | 2026-03-13 17:08:20,300 [CLIENT 1] Round 2: submitting update to server
+fl-client-1  | 2026-03-13 17:08:27,870 [CLIENT 1] HTTP Request: POST http://fl-server:8000/update/1 "HTTP/1.1 200 OK"
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 103, in handle_request
+fl-client-3  |     return self._connection.handle_request(request)
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_sync/http11.py", line 136, in handle_request
+fl-client-3  |     raise exc
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_sync/http11.py", line 106, in handle_request
+fl-client-3  |     ) = self._receive_response_headers(**kwargs)
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_sync/http11.py", line 177, in _receive_response_headers
+fl-client-3  |     event = self._receive_event(timeout=timeout)
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_sync/http11.py", line 217, in _receive_event
+fl-client-3  |     data = self._network_stream.read(
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_backends/sync.py", line 126, in read
+fl-client-3  |     with map_exceptions(exc_map):
+fl-client-3  |   File "/usr/local/lib/python3.10/contextlib.py", line 153, in __exit__
+fl-client-1  | 2026-03-13 17:08:27,887 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:28,412 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:28,938 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:29,468 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:29,995 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:30,535 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:31,069 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-3  |     self.gen.throw(typ, value, traceback)
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+fl-client-3  |     raise to_exc(exc) from exc
+fl-client-3  | httpcore.ReadError: [Errno 104] Connection reset by peer
+fl-client-3  | 
+fl-client-3  | The above exception was the direct cause of the following exception:
+fl-client-3  | 
+fl-client-3  | Traceback (most recent call last):
+fl-client-3  |   File "/usr/local/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+fl-client-3  |     return _run_code(code, main_globals, None,
+fl-client-3  |   File "/usr/local/lib/python3.10/runpy.py", line 86, in _run_code
+fl-client-3  |     exec(code, run_globals)
+fl-client-3  |   File "/app/src/client_main.py", line 122, in <module>
+fl-client-3  |     main()
+fl-client-3  |   File "/app/src/client_main.py", line 109, in main
+fl-client-3  |     new_global_sd = transport.submit_update(args.client_id, updated_sd)
+fl-client-3  |   File "/app/src/transport/http_adapter.py", line 143, in submit_update
+fl-client-3  |     status = httpx.get(f"{self.server_url}/round_status", timeout=10).json()
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpx/_api.py", line 195, in get
+fl-client-1  | 2026-03-13 17:08:31,600 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:32,130 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | 2026-03-13 17:08:32,660 [CLIENT 1] HTTP Request: GET http://fl-server:8000/round_status "HTTP/1.1 200 OK"
+fl-client-1  | Traceback (most recent call last):
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+fl-client-1  |     yield
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 250, in handle_request
+fl-client-3  |     return request(
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpx/_api.py", line 109, in request
+fl-client-3  |     return client.request(
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 825, in request
+fl-client-3  |     return self.send(request, auth=auth, follow_redirects=follow_redirects)
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 914, in send
+fl-client-3  |     response = self._send_handling_auth(
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+fl-client-1  |     resp = self._pool.handle_request(req)
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 256, in handle_request
+fl-client-1  |     raise exc from None
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 236, in handle_request
+fl-client-1  |     response = connection.handle_request(
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 103, in handle_request
+fl-client-1  |     return self._connection.handle_request(request)
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_sync/http11.py", line 136, in handle_request
+fl-client-1  |     raise exc
+fl-client-3  |     response = self._send_handling_redirects(
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+fl-client-3  |     response = self._send_single_request(request)
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_sync/http11.py", line 106, in handle_request
+fl-client-1  |     ) = self._receive_response_headers(**kwargs)
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_sync/http11.py", line 177, in _receive_response_headers
+fl-client-1  |     event = self._receive_event(timeout=timeout)
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_sync/http11.py", line 217, in _receive_event
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 1014, in _send_single_request
+fl-client-3  |     response = transport.handle_request(request)
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 249, in handle_request
+fl-client-1  |     data = self._network_stream.read(
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_backends/sync.py", line 126, in read
+fl-client-3  |     with map_httpcore_exceptions():
+fl-client-3  |   File "/usr/local/lib/python3.10/contextlib.py", line 153, in __exit__
+fl-client-1  |     with map_exceptions(exc_map):
+fl-client-1  |   File "/usr/local/lib/python3.10/contextlib.py", line 153, in __exit__
+fl-client-1  |     self.gen.throw(typ, value, traceback)
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+fl-client-1  |     raise to_exc(exc) from exc
+fl-client-1  | httpcore.ReadError: [Errno 104] Connection reset by peer
+fl-client-3  |     self.gen.throw(typ, value, traceback)
+fl-client-3  |   File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+fl-client-3  |     raise mapped_exc(message) from exc
+fl-client-3  | httpx.ReadError: [Errno 104] Connection reset by peer
+fl-client-1  | 
+fl-client-1  | The above exception was the direct cause of the following exception:
+fl-client-1  | 
+fl-client-1  | Traceback (most recent call last):
+fl-client-1  |   File "/usr/local/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+fl-client-1  |     return _run_code(code, main_globals, None,
+fl-client-1  |   File "/usr/local/lib/python3.10/runpy.py", line 86, in _run_code
+fl-client-1  |     exec(code, run_globals)
+fl-client-1  |   File "/app/src/client_main.py", line 122, in <module>
+fl-client-1  |     main()
+fl-client-1  |   File "/app/src/client_main.py", line 109, in main
+fl-client-1  |     new_global_sd = transport.submit_update(args.client_id, updated_sd)
+fl-client-1  |   File "/app/src/transport/http_adapter.py", line 143, in submit_update
+fl-client-1  |     status = httpx.get(f"{self.server_url}/round_status", timeout=10).json()
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpx/_api.py", line 195, in get
+fl-client-1  |     return request(
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpx/_api.py", line 109, in request
+fl-client-1  |     return client.request(
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 825, in request
+fl-client-1  |     return self.send(request, auth=auth, follow_redirects=follow_redirects)
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 914, in send
+fl-client-1  |     response = self._send_handling_auth(
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+fl-client-1  |     response = self._send_handling_redirects(
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+fl-client-1  |     response = self._send_single_request(request)
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 1014, in _send_single_request
+fl-client-1  |     response = transport.handle_request(request)
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 249, in handle_request
+fl-client-1  |     with map_httpcore_exceptions():
+fl-client-1  |   File "/usr/local/lib/python3.10/contextlib.py", line 153, in __exit__
+fl-client-1  |     self.gen.throw(typ, value, traceback)
+fl-client-1  |   File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+fl-client-1  |     raise mapped_exc(message) from exc
+fl-client-1  | httpx.ReadError: [Errno 104] Connection reset by peer

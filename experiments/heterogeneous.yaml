@@ -1,0 +1,29 @@
+experiment:
+  name: "heterogeneous"
+  rounds: 3
+
+server:
+  port: 8000
+
+# Bandwidth values are chosen relative to the ResNet18 state dict size (~44 MB).
+# Rule of thumb: minimum bandwidth should allow upload in <120s per round.
+#   50mbit  →  ~7s  upload  (fast corporate WiFi)
+#   20mbit  →  ~18s upload  (average home WiFi)
+#    5mbit  →  ~70s upload  (congested mobile / slow home)
+# Do not go below ~3mbit with ResNet18 unless you expect very long run times.
+clients:
+  - id: 1
+    network:
+      bandwidth: "50mbit"
+      latency: "5ms"
+      loss: "0%"
+  - id: 2
+    network:
+      bandwidth: "50mbit"
+      latency: "5ms"
+      loss: "1%"
+  - id: 3
+    network:
+      bandwidth: "50mbit"
+      latency: "5ms"
+      loss: "0%"
