@@ -1,0 +1,19 @@
+# Git and IDE
+.git
+.gitignore
+.cursor
+*.md
+!docs/**/*.md
+# Data (mount at run time)
+data/
+# Legacy and outputs
+old/
+*.xlsx
+__pycache__
+*.pyc
+.pytest_cache
+.coverage
+htmlcov
+venv
+.venv
+*.tex

@@ -1,0 +1,139 @@
+# Phase 01: FL server + clients + optional traffic-gen
+# See docs/phase-01/architecture.md and README.md
+# Build from repo root: docker compose -f infra/compose.yml build
+# Run: docker compose -f infra/compose.yml up -d
+
+services:
+  fl-server:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.ml-base
+    image: phase1-fl-ml:latest
+    container_name: fl-server
+    hostname: fl-server
+    networks:
+      fl-net:
+        aliases:
+          - fl-server
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - ROLE=server
+      - FL_SERVER_HOST=0.0.0.0
+      - FL_SERVER_PORT=8000
+      - NUM_CLIENTS=2
+    ports:
+      - "8000:8000"
+    volumes:
+      - ..:/app
+    command: ["python", "-m", "src.server_main"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+
+  fl-client-1:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.ml-base
+    image: phase1-fl-ml:latest
+    container_name: fl-client-1
+    hostname: fl-client-1
+    networks:
+      fl-net:
+        aliases:
+          - fl-client-1
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - ROLE=client
+      - CLIENT_ID=1
+      - FL_SERVER_URL=http://fl-server:8000
+      - FL_ROUNDS=1
+    volumes:
+      - ..:/app
+    command: ["python", "-m", "src.client_main", "--synthetic"]
+    depends_on:
+      fl-server:
+        condition: service_healthy
+
+  fl-client-2:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.ml-base
+    image: phase1-fl-ml:latest
+    container_name: fl-client-2
+    hostname: fl-client-2
+    networks:
+      fl-net:
+        aliases:
+          - fl-client-2
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - ROLE=client
+      - CLIENT_ID=2
+      - FL_SERVER_URL=http://fl-server:8000
+      - FL_ROUNDS=1
+    volumes:
+      - ..:/app
+    command: ["python", "-m", "src.client_main", "--synthetic"]
+    depends_on:
+      fl-server:
+        condition: service_healthy
+
+  # Idle versions of server and clients for network validation (sleep infinity)
+  fl-server-idle:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.ml-base
+    image: phase1-fl-ml:latest
+    container_name: fl-server-idle
+    hostname: fl-server-idle
+    networks:
+      fl-net:
+        aliases:
+          - fl-server-idle
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ..:/app
+    command: ["sleep", "infinity"]
+    profiles: ["network-test"]
+
+  fl-client-idle:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.ml-base
+    image: phase1-fl-ml:latest
+    container_name: fl-client-idle
+    hostname: fl-client-idle
+    networks:
+      fl-net:
+        aliases:
+          - fl-client-idle
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ..:/app
+    command: ["sleep", "infinity"]
+    profiles: ["network-test"]
+
+  # iperf3 server for throughput tests and future congestion
+  iperf-server:
+    image: networkstatic/iperf3
+    container_name: iperf-server
+    hostname: iperf-server
+    networks:
+      fl-net:
+        aliases:
+          - iperf-server
+    command: ["-s"]
+    profiles: ["network-test"]
+
+networks:
+  fl-net:
+    driver: bridge
+    name: phase1-fl-net

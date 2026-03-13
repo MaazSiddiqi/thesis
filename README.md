@@ -1,26 +1,58 @@
-# SplitFed: When Federated Learning Meets Split Learning
+# Network-Aware Federated Learning Simulator
 
-Releasing the source code version1 of our work "SplitFed: When Federated Learning Meets Split Learning."
+Docker-based FL simulator that runs an arbitrary number of clients under
+configurable network conditions (bandwidth, latency, congestion) and reports
+network statistics at the end of training.
 
-We have three versions of our programs:
+**Thesis**: *Network-Aware Analysis of Federated Learning*
+(CS4490Z, Western University).
 
-Version1: without using socket and no DP+PixelDP
+## Repository Layout
 
-Version2: with using socket but no DP+PixelDP
+```
+src/                  # Modular Python package
+  models/             #   ResNet18 architecture
+  data/               #   Dataset, partitioning, preprocessing
+  training/           #   Metrics helpers
+  fl/                 #   FL core: aggregation, client, server (transport-agnostic)
+  transport/          #   Transport interfaces + HTTP+JSON adapter
+  server_main.py      #   FL server entrypoint
+  client_main.py      #   FL client entrypoint
+infra/                # Docker infrastructure
+  Dockerfile.ml-base  #   Python + PyTorch + network tools image
+  Dockerfile.network-test  # Lightweight network-only image
+  compose.yml         #   FL server + clients + iperf3
+  scripts/            #   Connectivity and tc/netem validation scripts
+tests/                # pytest unit and integration tests
+docs/                 # Architecture, decisions, test plan, runbook
+old/                  # Archived reference scripts (original SplitFed codebase)
+```
 
-Version3: without using socket but with DP+PixelDP (required more packages)
+## Quick Start
 
-Other versions will be released soon.
+See [docs/runbook.md](docs/runbook.md) for full instructions.
 
-Please cite the main paper if useful: https://arxiv.org/pdf/2004.12088.pdf
+```bash
+# Run unit + integration tests (no Docker needed)
+python3 -m pytest tests/ -v
 
+# Build and start containers
+docker compose -f infra/compose.yml build
+docker compose -f infra/compose.yml up
 
-## Description
+# Network validation (tc/netem/iperf3)
+docker compose -f infra/compose.yml --profile network-test up -d
+./infra/scripts/validate_network.sh
+```
 
-This repository contains the implementation of Centralized Learning (baseline), Federated Learning, Split Learning, SplitFedV1 Learning and SplitFedV2 Learning.
+## Roadmap
 
-All programs are written in python 3.7.2 using the PyTorch library (PyTorch 1.2.0).
+- **Phase 1** (done): Container foundation, FL core, HTTP transport, network utility validation.
+- **Phase 2** (next): Arbitrary N-client orchestration, experiment configuration, network statistics collection.
+- **Phase 3** (planned): Full experiment matrix (bandwidth/latency/congestion sweeps) and analysis.
 
-Dataset: HAM10000
+## Reference
 
-Model: ResNet18
+The original SplitFed codebase (Thapa et al. 2022) is archived under `old/`.
+The original thesis proposal covering FL, SL, and SplitFed is at
+[thesis_proposal.tex](thesis_proposal.tex) — retained for academic context.

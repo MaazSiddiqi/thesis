@@ -1,0 +1,13 @@
+# Minimal image for network validation (tc, netem, ping, iperf3)
+# See docs/phase-01/network-validation.md
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    iproute2 \
+    iputils-ping \
+    iperf3 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# No Python required for connectivity-only checks
+CMD ["sleep", "infinity"]
