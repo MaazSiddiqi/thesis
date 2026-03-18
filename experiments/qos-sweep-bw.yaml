@@ -1,0 +1,40 @@
+experiment:
+  name: "qos-sweep-bw"
+  rounds: 40
+  num_clients: 3
+  alpha: 0.5
+
+server:
+  port: 8000
+
+# Bandwidth sweep: all clients get the same bandwidth. Run this config
+# once per bandwidth value by changing TC_BANDWIDTH, or run separate
+# copies of this file. Latency and loss are held at baseline values.
+#
+# Planned bandwidth values (run as separate experiments):
+#   5mbit   → ~71s theoretical upload   (below predicted floor)
+#   10mbit  → ~36s theoretical upload   (near floor)
+#   25mbit  → ~14s theoretical upload   (transition zone)
+#   50mbit  → ~7s  theoretical upload   (above floor)
+#   100mbit → ~3.6s theoretical upload  (baseline)
+#
+# NOTE: Do NOT run 1mbit with 40 rounds — one run would take ~5 hours.
+# If 1mbit is needed, use a separate config with rounds: 5 for timing only.
+#
+# This config is set to the baseline (100mbit). Copy and modify per sweep point.
+clients:
+  - id: 1
+    network:
+      bandwidth: "100mbit"
+      latency: "5ms"
+      loss: "0%"
+  - id: 2
+    network:
+      bandwidth: "100mbit"
+      latency: "5ms"
+      loss: "0%"
+  - id: 3
+    network:
+      bandwidth: "100mbit"
+      latency: "5ms"
+      loss: "0%"

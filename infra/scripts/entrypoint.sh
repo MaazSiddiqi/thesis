@@ -7,9 +7,11 @@ if [ -n "${TC_BANDWIDTH}" ] || [ -n "${TC_LATENCY}" ] || [ -n "${TC_LOSS}" ]; th
     _loss="${TC_LOSS:-0%}"
 
     echo "[ENTRYPOINT] Applying network shaping: bandwidth=${_bw} latency=${_lat} loss=${_loss}"
+
     echo "[ENTRYPOINT] tc qdisc add dev eth0 root netem delay ${_lat} rate ${_bw} loss ${_loss}"
     tc qdisc add dev eth0 root netem delay "${_lat}" rate "${_bw}" loss "${_loss}"
-    echo "[ENTRYPOINT] Network shaping applied."
+
+    echo "[ENTRYPOINT] Network shaping applied (egress/upload only)."
 else
     echo "[ENTRYPOINT] No network shaping configured. Starting directly."
 fi

@@ -1,6 +1,8 @@
 experiment:
   name: "heterogeneous"
   rounds: 3
+  num_clients: 3
+  alpha: 0.5  # Dirichlet concentration: lower = more heterogeneous
 
 server:
   port: 8000

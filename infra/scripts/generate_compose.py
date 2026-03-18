@@ -25,9 +25,10 @@ def build_compose(config: dict) -> dict:
     exp = config["experiment"]
     name = exp["name"]
     rounds = exp["rounds"]
+    alpha = exp.get("alpha", 0.5)
     port = config["server"]["port"]
     clients = config["clients"]
-    num_clients = len(clients)
+    num_clients = exp.get("num_clients", len(clients))
 
     services: dict = {}
 
@@ -78,6 +79,8 @@ def build_compose(config: dict) -> dict:
             f"CLIENT_ID={cid}",
             f"FL_SERVER_URL=http://fl-server:{port}",
             f"FL_ROUNDS={rounds}",
+            f"NUM_CLIENTS={num_clients}",
+            f"FL_ALPHA={alpha}",
         ]
         if network.get("bandwidth") is not None:
             env.append(f"TC_BANDWIDTH={network['bandwidth']}")
@@ -102,7 +105,7 @@ def build_compose(config: dict) -> dict:
             "cap_add": ["NET_ADMIN"],
             "environment": env,
             "volumes": ["..:/app"],
-            "command": ["python", "-m", "src.client_main", "--synthetic"],
+            "command": ["python", "-m", "src.client_main"],
             "depends_on": {
                 "fl-server": {"condition": "service_healthy"},
             },

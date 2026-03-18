@@ -1,0 +1,29 @@
+experiment:
+  name: "straggler"
+  rounds: 40
+  num_clients: 3
+  alpha: 0.5  # non-IID Dirichlet concentration
+
+server:
+  port: 8000
+
+# Straggler experiment: two fast clients, one slow client.
+# Tests how a single bandwidth-constrained client affects the whole federation.
+# The round duration should be dominated by client-3 despite clients 1 and 2
+# finishing much faster. wait_ms on clients 1 and 2 will quantify the penalty.
+clients:
+  - id: 1
+    network:
+      bandwidth: "100mbit"
+      latency: "5ms"
+      loss: "0%"
+  - id: 2
+    network:
+      bandwidth: "100mbit"
+      latency: "5ms"
+      loss: "0%"
+  - id: 3
+    network:
+      bandwidth: "5mbit"   # straggler: ~71s theoretical upload at 44 MB
+      latency: "50ms"
+      loss: "1%"

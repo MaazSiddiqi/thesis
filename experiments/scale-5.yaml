@@ -1,0 +1,37 @@
+experiment:
+  name: "scale-5"
+  rounds: 20
+  num_clients: 5
+  alpha: 0.5
+
+server:
+  port: 8000
+
+# Scalability experiment: 5 clients at baseline network conditions.
+# Compare round duration and convergence speed against the 3-client baseline.
+clients:
+  - id: 1
+    network:
+      bandwidth: "100mbit"
+      latency: "5ms"
+      loss: "0%"
+  - id: 2
+    network:
+      bandwidth: "100mbit"
+      latency: "5ms"
+      loss: "0%"
+  - id: 3
+    network:
+      bandwidth: "100mbit"
+      latency: "5ms"
+      loss: "0%"
+  - id: 4
+    network:
+      bandwidth: "100mbit"
+      latency: "5ms"
+      loss: "0%"
+  - id: 5
+    network:
+      bandwidth: "100mbit"
+      latency: "5ms"
+      loss: "0%"

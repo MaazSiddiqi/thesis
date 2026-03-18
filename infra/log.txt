@@ -1,0 +1,4 @@
+2026-03-16T15:02:00.793Z [info] Initializing language server
+2026-03-16T15:02:00.797Z [info] Opened document: file:///Users/maaz/Desktop/uni/thesis/SplitFed-When-Federated-Learning-Meets-Split-Learning/infra/compose.generated.yml
+2026-03-16T15:02:00.939Z [info] [opencode] Starting prompt ses_308d4ee1affebvAVNum3kqzE3b (3577 chars)
+2026-03-16T15:02:00.942Z [warn] [lumen] identified stale request, session ses_308d4ee19ffe2nZOkTmYAlO53D aborted

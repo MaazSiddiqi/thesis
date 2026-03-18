@@ -154,6 +154,46 @@ This generates `infra/compose.generated.yml`, builds the image (if needed), and 
 [CLIENT 2] ────────────────────────────────────────────────────────────────
 ```
 
+### Expected logs (Phase 2, heterogeneous example)
+
+The exact numbers will vary, but the sequence should look roughly like:
+
+**Server** (after all rounds complete):
+
+```text
+fl-server  | [SERVER] Experiment=heterogeneous Starting FL server on 0.0.0.0:8000 (expecting 3 clients, 3 rounds)
+fl-server  | [SERVER] Round 0: received update from client 1 (1/3)
+fl-server  | [SERVER] Round 0: received update from client 2 (2/3)
+fl-server  | [SERVER] Round 0: received update from client 3 (3/3)
+fl-server  | [SERVER] Round 0: aggregating 3 updates (round took 3120.0 ms)
+...
+fl-server  | [SERVER] Experiment=heterogeneous Summary (clients=3, rounds=3)
+fl-server  | [SERVER] ── Server Round Stats Summary ───────────────
+fl-server  | [SERVER]  round    duration_ms
+fl-server  | [SERVER]      0         3120.0
+fl-server  | [SERVER]      1         4285.3
+fl-server  | [SERVER]      2         3978.6
+fl-server  | [SERVER] ─────────────────────────────────────────────
+fl-server  | [SERVER] All 3 rounds complete. Shutting down.
+```
+
+**One client** (with constrained bandwidth, showing its config and network stats):
+
+```text
+fl-client-2 | [CLIENT 2] Experiment=heterogeneous Client 2 starting, server=http://fl-server:8000, rounds=3
+fl-client-2 | [CLIENT 2] Round 0: fetching global model
+fl-client-2 | [CLIENT 2] Round 0: training locally
+...
+fl-client-2 | [CLIENT 2] Experiment=heterogeneous Client 2 finished 3 rounds
+fl-client-2 | [CLIENT 2] Experiment=heterogeneous Client 2 config: rounds=3, bandwidth=5mbit, latency=100ms, loss=1%
+fl-client-2 | [CLIENT 2] ── Network Stats Summary ────────────────────────────────────────
+fl-client-2 | [CLIENT 2]   round  get_model_ms  submit_ms  train_ms  submit_bytes  poll_count
+fl-client-2 | [CLIENT 2]       0          32.1      890.2    3210.0      44040012           3
+fl-client-2 | [CLIENT 2]       1          28.4      820.9    3198.3      44040012           2
+fl-client-2 | [CLIENT 2]       2          30.7      945.5    3205.1      44040012           4
+fl-client-2 | [CLIENT 2] ────────────────────────────────────────────────────────────────
+```
+
 ### Manual steps (if you prefer)
 
 ```bash
@@ -215,9 +255,20 @@ docker compose -f infra/compose.generated.yml down
 
 ## Known Limitations
 
-- Smoke tests use synthetic data; full HAM10000 training not yet wired to containers.
+- Smoke tests use synthetic data; real dataset training not yet wired to containers.
 - Stats are logged to terminal only; CSV/JSON export is Phase 3.
 - `signal.pause()` in server_main.py is Unix-only.
+
+## TODO: Migrate to CIFAR-10 for Thesis Experiments
+
+Before running the accuracy sweep experiments for the thesis, the simulator needs
+to be migrated from synthetic data to CIFAR-10:
+
+1. Add CIFAR-10 download + preprocessing to the client data pipeline.
+2. Update model output classes from 7 to 10 in the server config.
+3. Implement dataset partitioning across clients (IID split to start).
+4. Verify a full training run converges to a reasonable accuracy at baseline
+   network conditions (100 Mbps, 5 ms latency, 0% loss) before starting the sweep.
 
 ## What's Next (Phase 3)
 

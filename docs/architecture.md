@@ -62,11 +62,15 @@ Each client container captures bytes sent/received and wall-clock time per HTTP 
 
 High `submit_ms` on a client with constrained bandwidth directly quantifies the network's impact on FL round time.
 
+Stats are kept in memory inside the client process and emitted only as a formatted table to stdout; no files are written in Phase 2.
+
+The server also records per-round aggregation durations and prints a short server-side summary table after all configured rounds complete.
+
 ## Data and Model
 
-- **Dataset**: HAM10000 skin lesion classification. Synthetic data available for smoke tests.
-- **Model**: ResNet18, 7 classes.
-- **Partitioning**: IID across clients.
+- **Dataset**: CIFAR-10 (10 classes). Synthetic data available for smoke tests via `--synthetic`.
+- **Model**: ResNet-18.
+- **Partitioning**: Dirichlet(α) across clients; α configurable per experiment.
 
 ## File Layout
 
