@@ -1,0 +1,52 @@
+\contentsline {chapter}{Abstract}{1}{Doc-Start}%
+\contentsline {chapter}{\numberline {1}Introduction}{4}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Background and Motivation}{4}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Problem Statement}{5}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Objectives}{5}{section.1.3}%
+\contentsline {section}{\numberline {1.4}Contributions}{6}{section.1.4}%
+\contentsline {section}{\numberline {1.5}Thesis Structure}{6}{section.1.5}%
+\contentsline {chapter}{\numberline {2}Related Work}{7}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Federated Learning}{7}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Existing Network Simulation Tools}{7}{section.2.2}%
+\contentsline {section}{\numberline {2.3}Network-Aware Federated Learning}{8}{section.2.3}%
+\contentsline {section}{\numberline {2.4}Summary and Research Gap}{8}{section.2.4}%
+\contentsline {chapter}{\numberline {3}Problem Formulation}{10}{chapter.3}%
+\contentsline {section}{\numberline {3.1}System Model}{10}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Communication Cost Model}{10}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Research Questions}{11}{section.3.3}%
+\contentsline {section}{\numberline {3.4}Scope and Assumptions}{11}{section.3.4}%
+\contentsline {chapter}{\numberline {4}Methodology}{13}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Federated Learning Architecture}{13}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Dataset and Data Heterogeneity}{13}{section.4.2}%
+\contentsline {subsection}{\numberline {4.2.1}Non-IID Partitioning via Dirichlet Distribution}{14}{subsection.4.2.1}%
+\contentsline {section}{\numberline {4.3}Network Impairment Model}{14}{section.4.3}%
+\contentsline {section}{\numberline {4.4}Evaluation Metrics}{15}{section.4.4}%
+\contentsline {section}{\numberline {4.5}Experimental Protocol}{17}{section.4.5}%
+\contentsline {chapter}{\numberline {5}Software Implementation}{18}{chapter.5}%
+\contentsline {section}{\numberline {5.1}System Overview}{18}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Docker Compose Architecture}{19}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}Container Image}{19}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}Compose Generation}{19}{subsection.5.2.2}%
+\contentsline {section}{\numberline {5.3}FL Server}{21}{section.5.3}%
+\contentsline {subsection}{\numberline {5.3.1}Aggregation Logic}{21}{subsection.5.3.1}%
+\contentsline {section}{\numberline {5.4}FL Client}{22}{section.5.4}%
+\contentsline {subsection}{\numberline {5.4.1}Data Loading and Non-IID Partitioning}{23}{subsection.5.4.1}%
+\contentsline {subsection}{\numberline {5.4.2}Statistics Collection}{23}{subsection.5.4.2}%
+\contentsline {section}{\numberline {5.5}Network Emulation}{23}{section.5.5}%
+\contentsline {section}{\numberline {5.6}Observed Baseline Results}{24}{section.5.6}%
+\contentsline {chapter}{\numberline {6}QoS Analysis and Results}{25}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Theoretical Throughput Analysis}{25}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Convergence Results}{26}{section.6.2}%
+\contentsline {subsection}{\numberline {6.2.1}Effect of Bandwidth on Convergence}{26}{subsection.6.2.1}%
+\contentsline {subsection}{\numberline {6.2.2}Effect of Latency on Round Duration}{27}{subsection.6.2.2}%
+\contentsline {subsection}{\numberline {6.2.3}Accuracy-Bandwidth Degradation Model}{28}{subsection.6.2.3}%
+\contentsline {section}{\numberline {6.3}Effect of Packet Loss}{29}{section.6.3}%
+\contentsline {section}{\numberline {6.4}Summary of QoS Findings}{29}{section.6.4}%
+\contentsline {chapter}{\numberline {7}Future Research Directions}{30}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Network-Aware Client Admission}{30}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Network Security Analysis}{30}{section.7.2}%
+\contentsline {section}{\numberline {7.3}UI for Network Feasibility Assessment}{31}{section.7.3}%
+\contentsline {section}{\numberline {7.4}Asynchronous Federated Learning}{31}{section.7.4}%
+\contentsline {section}{\numberline {7.5}Scaling and HPC Cluster Deployment}{31}{section.7.5}%
+\contentsline {section}{\numberline {7.6}Asymmetric and Richer Network Impairment Models}{32}{section.7.6}%
+\contentsline {chapter}{\numberline {8}Conclusion}{33}{chapter.8}%

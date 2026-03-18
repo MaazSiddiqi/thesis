@@ -1,0 +1,12 @@
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {4.1}{\ignorespaces SplitFed learning architecture. Clients train only the lower layers of ResNet-18 and exchange smashed data and gradients with the server over TCP. After all clients complete a round, the server performs FedAvg aggregation.}}{11}{figure.caption.4}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {6.1}{\ignorespaces Validation accuracy over FL rounds at varying client bandwidth. \textbf {[Expected result - replace with empirical results.]} Dashed lines indicate configurations below the predicted throughput floor. At 1 Mbps, convergence stalls due to TCP timeout-induced round disruption.}}{19}{figure.caption.9}%
+\contentsline {figure}{\numberline {6.2}{\ignorespaces Mean FL round duration as a function of one-way latency. \textbf {[Replace with experimental data.]} High latency significantly increases round duration even at high bandwidth, due to multiple TCP round-trips in the HTTP-based model exchange protocol.}}{19}{figure.caption.10}%
+\contentsline {figure}{\numberline {6.3}{\ignorespaces Final model accuracy as a function of client bandwidth with sigmoid fit. $\beta ^* = 10$ Mbps is the identified throughput floor. \textbf {[Expected result - replace with empirical results.]}}}{20}{figure.caption.11}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }

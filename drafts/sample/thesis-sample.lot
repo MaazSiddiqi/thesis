@@ -1,0 +1,13 @@
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {4.1}{\ignorespaces QoS parameter sweep matrix. Each combination is a separate experimental run.}}{12}{table.caption.5}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {5.1}{\ignorespaces FL server API endpoints.}}{15}{table.caption.6}%
+\contentsline {table}{\numberline {5.2}{\ignorespaces Baseline network statistics per client per round (100 Mbps, 5 ms, 1\% loss).}}{16}{table.caption.7}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {6.1}{\ignorespaces Theoretical minimum upload time per round at each bandwidth (44.8 MB payload, 0\% loss).}}{18}{table.caption.8}%
+\contentsline {table}{\numberline {6.2}{\ignorespaces Summary of QoS impact on SplitFed performance. \textbf {[Populate with measured values.]}}}{21}{table.caption.12}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }

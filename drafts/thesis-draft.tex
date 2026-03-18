@@ -1,0 +1,1589 @@
+\documentclass[12pt,a4paper]{report}
+
+%% ── Packages ──────────────────────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{amsmath,amssymb}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{cite}
+\usepackage{setspace}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{tikz}
+\usepackage{pifont}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
+
+%% ── Formatting ────────────────────────────────────────────────────────────────
+\onehalfspacing
+\hypersetup{colorlinks=true, linkcolor=blue!70!black, citecolor=green!50!black, urlcolor=blue}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\small Federated Learning over Heterogeneous Networks}
+\lhead{\small Undergraduate Thesis}
+\cfoot{\thepage}
+
+%% ── Code listing style ────────────────────────────────────────────────────────
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  frame=single,
+  backgroundcolor=\color{gray!8},
+  keywordstyle=\color{blue!70!black}\bfseries,
+  commentstyle=\color{green!50!black},
+  stringstyle=\color{red!70!black},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=8pt,
+  captionpos=b
+}
+
+%% ─────────────────────────────────────────────────────────────────────────────
+\begin{document}
+
+%% ── Title Page ────────────────────────────────────────────────────────────────
+\begin{titlepage}
+  \centering
+  \vspace*{1.5cm}
+  {\LARGE\bfseries % TODO: Finalize thesis title
+  Federated Learning over Heterogeneous Networks:\\[0.4em]
+  A Network-Aware Simulator for Characterising QoS Impact\\[0.4em]
+  on Model Convergence\par}
+  \vspace{1.5cm}
+  {\large Undergraduate Thesis\par}
+  \vspace{0.5cm}
+  {\large Department of Computer Science\par}
+  \vspace{0.5cm}
+  {\large Western University\par}
+  \vspace{2cm}
+  {\large\bfseries [Student Name]\par}         % TODO: Add student name
+  \vspace{0.5cm}
+  {\large Supervisor: Dr.\ Zubair Fadlullah\par}
+  \vspace{2cm}
+  {\large \today\par}
+  \vfill
+  {\small Submitted in partial fulfilment of the requirements for the\\
+  Bachelor of Science in Computer Science} % TODO: Confirm degree name
+\end{titlepage}
+
+%% ── Abstract ──────────────────────────────────────────────────────────────────
+\begin{abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+% TODO: Write abstract last, once all sections are complete.
+% Key points to cover:
+%   - What is federated learning and why it matters (privacy, distributed data)
+%   - The gap: existing network simulators can't run real FL algorithms
+%   - What you built: Docker-based FL framework with programmable tc netem
+%   - What you measured: bandwidth, latency, packet loss vs convergence
+%   - Key finding: minimum bandwidth threshold, accuracy-bandwidth tradeoff
+%   - Practical use: guiding client selection and resource planning
+\end{abstract}
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+%% ══════════════════════════════════════════════════════════════════════════════
+\chapter{Introduction}
+%% ══════════════════════════════════════════════════════════════════════════════
+
+\section{Background and Motivation}
+
+The proliferation of edge devices, smartphones, and institutional networks has generated
+vast quantities of sensitive data, including medical records, biometric readings, and
+usage patterns, that cannot practically or legally be centralised for training.
+Federated Learning (FL), introduced by McMahan et al.\ \cite{mcmahan2017communication},
+addresses this by allowing a global model to be trained across many participants without
+any raw data leaving its source. Each client trains locally and shares only model weight
+updates with a central server, which aggregates them via the FedAvg algorithm and
+redistributes an improved global model.
+
+While FL's privacy guarantees are well-studied, a less-examined dimension is its
+sensitivity to the network over which it operates. Every FL round requires each
+participating client to download the current global model, train locally, and upload its
+updated weights. For a model such as ResNet-18, with approximately 44 MB of parameters,
+this represents significant data transfer repeated across every round of training.
+In heterogeneous real-world deployments, clients may range from hospital servers on
+gigabit ethernet to IoT devices on congested mobile links. The question of whether a
+given network environment can sustain FL training, and how long it will take, is
+practically important but poorly answered by existing tools.
+
+Current network simulation and analysis platforms do not bridge this gap. Tools such as
+OmNet++ and NS-3 are capable discrete-event network simulators, but they operate at the
+packet level and require artificial traffic models to approximate ML workloads; real
+neural network training cannot be executed inside them. MATLAB's network toolbox offers
+mathematical modelling, but lacks the containerisation and Python ecosystem integration
+needed to run production FL code. Vendor solutions such as Cisco's network analysis
+platforms are closed ecosystems with no mechanism for plugging in arbitrary training
+algorithms. FL frameworks themselves, such as Flower and TensorFlow Federated, run real
+training but assume ideal network conditions and offer no facility for programmable
+impairment injection.
+
+This thesis presents an open-source, Docker-based FL simulator that closes this gap.
+By combining a real FL training loop (ResNet-18 on CIFAR-10) with Linux traffic control (\texttt{tc netem})
+applied inside each client container, the framework enables direct measurement of how
+bandwidth, latency, and packet loss affect FL convergence, using real model weights,
+real gradients, and real timing data. The result is a reproducible testbed that a
+researcher or practitioner can use to characterise whether a given network environment
+can support FL, and to estimate the time cost of training at scale.
+
+\section{Problem Statement}
+
+Existing FL implementations are typically validated under ideal, local network
+conditions, such as Docker bridge networks on a single machine, that provide
+effectively unlimited bandwidth and near-zero latency. This leaves open a
+fundamental practical question for anyone considering a real-world FL deployment:
+
+\begin{quote}
+\emph{What is the minimum network capacity a federated client requires to
+participate usefully in a training process, and how do bandwidth, latency,
+and packet loss jointly affect convergence rate and final model accuracy?}
+\end{quote}
+
+Answering this question has two dimensions. The first is theoretical: given a
+known model size, one can derive an expected upload time at any bandwidth and
+estimate a floor below which round durations become impractical. The second is
+empirical: TCP retransmission behaviour under packet loss, synchronisation
+overhead, and straggler effects mean that real-world degradation diverges from
+the clean theoretical prediction. No existing open tool allows both dimensions
+to be measured together, with a real training algorithm and real model weights,
+under programmatically controlled network conditions.
+
+This thesis addresses that gap directly. The practical implications are
+significant: FL deployment decisions, client selection policies, and resource
+allocation on shared compute infrastructure all depend on having a principled,
+measurable answer to the question above.
+
+\section{Objectives}
+
+The specific objectives of this thesis are:
+\begin{enumerate}[label=\textbf{O\arabic*.}]
+  \item Design and implement a reproducible, open-source Docker-based FL testbed
+        with programmable network impairment injection via \texttt{tc netem}.
+  \item Characterise per-round communication cost as a function of model size and
+        number of federated clients.
+  \item Conduct a systematic QoS parameter sweep across bandwidth, latency, and
+        packet loss, and measure the effect on round duration and convergence speed.
+  \item Determine whether, and to what degree, network degradation below a threshold
+        bandwidth affects final model accuracy in addition to training time.
+  \item Derive a minimum network requirement: a practical threshold below which
+        a client should be excluded from synchronous FL rounds.
+\end{enumerate}
+
+\section{Contributions}
+
+The main contributions of this work are:
+\begin{itemize}
+  \item A fully reproducible, open-source Docker Compose FL testbed with integrated
+        \texttt{tc netem} network emulation (Section~\ref{sec:impl}).
+  \item Empirical characterisation of FL per-round communication cost under
+        heterogeneous network conditions (Section~\ref{ch:qos}).
+  \item A quantitative throughput-convergence model identifying the minimum
+        effective bandwidth for stable FL training (Section~\ref{sec:results}).
+  \item A practical minimum network requirement applicable to real-world FL
+        deployments, derived from the empirical sweep results (Section~\ref{sec:future}).
+\end{itemize}
+
+\section{Thesis Structure}
+
+The remainder of this thesis is organised as follows.
+Chapter~\ref{ch:related} surveys related work in federated learning, existing
+network simulation tools, and network-aware FL.
+Chapter~\ref{ch:problem} formalises the system model, communication cost model,
+and research questions.
+Chapter~\ref{ch:method} describes the experimental methodology, including the FL
+architecture, dataset and non-IID partitioning, network impairment model, evaluation
+metrics, and experimental protocol.
+Chapter~\ref{ch:impl} details the software implementation: repository structure,
+Docker Compose orchestration, server and client design, and network emulation.
+Chapter~\ref{ch:qos} presents the QoS analysis, including theoretical throughput
+predictions and empirical convergence results.
+Chapter~\ref{ch:future} discusses future research directions.
+Chapter~\ref{ch:conclusion} concludes the thesis.
+
+%% ══════════════════════════════════════════════════════════════════════════════
+\chapter{Related Work}
+\label{ch:related}
+%% ══════════════════════════════════════════════════════════════════════════════
+
+\section{Federated Learning}
+
+Federated Learning was formally introduced by McMahan et al.\ \cite{mcmahan2017communication},
+who proposed the FedAvg algorithm: each client trains a local model for one or more
+epochs and sends its updated weights to a central server, which aggregates them as a
+weighted average proportional to local dataset size. FedAvg remains the dominant
+aggregation scheme and is the algorithm used in this thesis.
+
+Subsequent work identified statistical heterogeneity as a core challenge. When client
+datasets follow different class distributions (non-IID data), local model updates can
+diverge, slowing convergence or causing the global model to oscillate. Li et al.\
+\cite{li2020fedprox} proposed FedProx, which adds a proximal regularisation term to
+the local objective to limit client drift under heterogeneous data distributions.
+Independently, Li et al.\ \cite{li2020federated} surveyed the broader landscape of FL
+challenges, identifying communication cost, privacy, and systems heterogeneity as the
+three dominant open problems.
+
+Communication efficiency has received dedicated attention. Konecny et al.\
+\cite{konevcny2016federated} proposed structured and sketched updates to reduce the
+size of model transmissions, observing that upload cost dominates in typical FL
+deployments. This observation is directly relevant to this thesis: with a ResNet-18
+model producing approximately 44 MB of weight updates per round, upload bandwidth
+is the primary network bottleneck under study.
+
+\section{Existing Network Simulation Tools}
+
+A number of general-purpose network simulation platforms exist, but none adequately
+support FL research that requires both real model training and programmable network
+impairment.
+
+NS-3 \cite{ns3} and OmNet++ \cite{omnetpp} are widely used discrete-event network
+simulators. Both model packet-level network behaviour with high fidelity, but they
+operate independently of application logic. To simulate FL traffic in either tool, a
+researcher must approximate model weight transfers as synthetic packet flows, losing
+the real gradient dynamics, convergence behaviour, and timing characteristics of actual
+training. Neither tool has native integration with Python-based ML frameworks such as
+PyTorch or TensorFlow.
+
+MATLAB's network simulation capabilities, available through Simulink and the
+Communications Toolbox, are oriented toward signal-level and protocol-level modelling.
+Running a distributed containerised workload with real model training inside MATLAB is
+not practical, and the licensing cost limits reproducibility in academic settings.
+
+Vendor platforms such as Cisco Packet Tracer and Cisco Modelling Labs are closed
+ecosystems designed for configuring and testing network device behaviour. They provide
+no mechanism for executing arbitrary application code or injecting a custom training
+algorithm.
+
+On the FL side, frameworks such as Flower \cite{beutel2020flower} and TensorFlow
+Federated \cite{tff} enable real FL training but make the opposite trade-off: they
+run real model updates while assuming ideal or real network conditions, with no
+facility for programmatically injecting bandwidth limits, latency, or packet loss
+across clients.
+
+The result is a gap at the intersection of the two concerns: no existing open tool
+allows a researcher to run a real FL training loop, with real model weights, under
+fully programmable and reproducible network impairment.
+
+\section{Network-Aware Federated Learning}
+
+The impact of network conditions on FL has received growing attention. Lim et al.\
+\cite{lim2020federated} survey FL for mobile edge networks, identifying bandwidth
+variability and device heterogeneity as primary obstacles to practical deployment.
+Nishio and Yonetani \cite{nishio2019client} proposed FedCS, a client management
+protocol that selects participants for each round based on estimated resource
+availability, including network speed, to meet a round deadline. Lai et al.\
+\cite{lai2021oort} introduced Oort, which combines statistical utility with system
+utility (including network throughput) to guide participant selection and improve
+overall training efficiency.
+
+These works share a common limitation: their network models are either analytical
+approximations or drawn from real deployments that cannot be controlled or reproduced.
+None provide empirical FL measurements under a systematic, programmable sweep of
+network QoS parameters using real model training.
+
+\section{Summary and Research Gap}
+
+Existing work falls into two categories. Network simulators such as NS-3 and OmNet++
+provide accurate packet-level modelling but cannot execute real FL algorithms.
+FL frameworks such as Flower and TensorFlow Federated run real training but under
+ideal or uncontrolled network conditions. Analytical studies of network-aware FL
+propose client selection strategies without empirical validation under controlled
+impairment.
+
+This thesis bridges that gap. By combining a real FL training loop with kernel-level
+network shaping via \texttt{tc netem} inside Docker containers, the framework presented
+here enables direct, reproducible measurement of how bandwidth, latency, and packet
+loss affect FL convergence with real model weights and real training dynamics.
+
+%% ══════════════════════════════════════════════════════════════════════════════
+\chapter{Problem Formulation}
+\label{ch:problem}
+%% ══════════════════════════════════════════════════════════════════════════════
+
+\section{System Model}
+
+Consider a federated learning system with one server $\mathcal{S}$ and a set of
+$K$ clients $\mathcal{C} = \{c_1, c_2, \ldots, c_K\}$. Each client $c_k$ holds
+a private local dataset $\mathcal{D}_k$ of $n_k$ labelled samples. The datasets
+are non-overlapping across clients: $\mathcal{D}_i \cap \mathcal{D}_j = \emptyset$
+for $i \neq j$.
+
+A global model $f(\mathbf{x}; \boldsymbol{\theta})$ with parameters
+$\boldsymbol{\theta}$ is trained collaboratively. In each training round $r$, every
+client $c_k$ receives the current global parameters $\boldsymbol{\theta}^{(r)}$,
+performs one epoch of local gradient descent on $\mathcal{D}_k$ to produce updated
+parameters $\boldsymbol{\theta}_k^{(r)}$, and returns them to $\mathcal{S}$.
+The server aggregates all client updates using the FedAvg rule:
+
+\begin{equation}
+  \boldsymbol{\theta}^{(r+1)} = \sum_{k=1}^{K} \frac{n_k}{n}
+  \boldsymbol{\theta}_k^{(r)}
+  \label{eq:fedavg}
+\end{equation}
+
+where $n = \sum_{k=1}^{K} n_k$ is the total number of training samples across
+all clients. The updated global model $\boldsymbol{\theta}^{(r+1)}$ is then
+redistributed to all clients for the next round.
+
+\section{Communication Cost Model}
+
+In standard federated learning, each client transmits and receives the full model
+parameter vector each round. The per-round communication events for client $c_k$ are:
+
+\begin{enumerate}
+  \item \textbf{Model download:} receive $\boldsymbol{\theta}^{(r)}$ from
+        $\mathcal{S}$, payload $B_w$ bytes.
+  \item \textbf{Local training:} compute $\boldsymbol{\theta}_k^{(r)}$ over
+        $\mathcal{D}_k$, duration $T_{\mathrm{train}}^{(k)}$.
+  \item \textbf{Weight upload:} transmit $\boldsymbol{\theta}_k^{(r)}$ to
+        $\mathcal{S}$, payload $B_w$ bytes.
+\end{enumerate}
+
+Since the same parameter vector is both downloaded and uploaded, the total bytes
+exchanged by client $c_k$ per round is $B_{\mathrm{total}} = 2 B_w$. For the
+ResNet-18 model used in this thesis, $B_w \approx 44.8$ MB, as confirmed by the
+constant \texttt{submit\_bytes} value observed across all baseline runs.
+
+The communication time for client $c_k$ over a channel with bandwidth $\beta_k$
+(bps), one-way latency $\tau_k$ (ms), and packet loss rate $\rho_k$ is modelled as:
+
+\begin{equation}
+  T_{\mathrm{comm}}^{(k)} =
+  \frac{B_{\mathrm{total}}}{\beta_k \cdot (1 - \rho_k)} + \alpha \cdot \tau_k
+  \label{eq:tcomm}
+\end{equation}
+
+where $\alpha$ is a multiplier capturing the number of TCP round-trips incurred by
+the HTTP-based model exchange protocol. The total wall-clock duration of round $r$
+is governed by the \emph{straggler}, the client that takes longest to complete.
+Under synchronous FedAvg, the server cannot aggregate until every client has
+submitted its update, so:
+
+\begin{equation}
+  T_{\mathrm{round}}^{(r)} = \max_{k \in \mathcal{C}}
+  \left( T_{\mathrm{train}}^{(k)} + T_{\mathrm{comm}}^{(k)} \right)
+  \label{eq:tround}
+\end{equation}
+
+Equation~\ref{eq:tround} makes the straggler effect explicit: a single
+bandwidth-constrained client can dominate $T_{\mathrm{round}}$ regardless of how
+fast all other clients are. This motivates the search for a minimum bandwidth
+threshold below which including a client becomes counterproductive.
+
+\section{Research Questions}
+
+Three formal research questions are derived from the system model above:
+
+\begin{description}
+  \item[RQ1 (Throughput Floor):] Is there a minimum bandwidth $\beta^*$ such that
+  for $\beta_k < \beta^*$, client $c_k$ becomes a straggler that causes
+  $T_{\mathrm{round}}$ to grow super-linearly, making synchronous FL impractical?
+
+  \item[RQ2 (Accuracy Degradation):] Does operating below $\beta^*$ also reduce
+  final model accuracy after $R$ rounds, or is the effect purely on training time?
+
+  \item[RQ3 (Minimum Network Requirement):] Can a simple threshold defined over
+  $\beta_k$, $\tau_k$, and $\rho_k$ identify clients that should be excluded from
+  a round in order to protect convergence integrity and bound round duration?
+\end{description}
+
+\section{Scope and Assumptions}
+
+This thesis makes the following assumptions:
+\begin{itemize}
+  \item Synchronous FL aggregation via FedAvg; asynchronous FL is left for future work.
+  \item TCP transport layer via HTTP; alternative protocols such as gRPC are
+        not considered.
+  \item Network conditions are stationary within a round but vary across experimental
+        configurations.
+  \item $K = 3$ clients in all main experiments.
+  \item ResNet-18 trained on CIFAR-10 (10-class image classification).
+  \item Each client trains for $E = 1$ local epoch per round.
+  \item Network shaping is applied to egress (upload) traffic only.  The
+        configured bandwidth, latency, and packet loss affect model uploads from
+        clients to the server; downloads are unthrottled due to the absence of
+        the IFB kernel module on macOS Docker Desktop.  Symmetric and asymmetric
+        ingress shaping are left for future work on native Linux hosts.
+\end{itemize}
+
+%% ══════════════════════════════════════════════════════════════════════════════
+\chapter{Methodology}
+\label{ch:method}
+%% ══════════════════════════════════════════════════════════════════════════════
+
+\section{Federated Learning Architecture}
+
+The system follows the standard client-server FL topology.  A single server
+$\mathcal{S}$ holds the global model and $K$ clients each hold a private local
+dataset.  Communication is over HTTP/JSON on a shared Docker bridge network; the
+server exposes a lightweight REST API and all model weight payloads are
+serialised as raw byte buffers via \texttt{torch.save}.
+
+Figure~\ref{fig:round_lifecycle} illustrates the five phases of each FL round.
+The round boundary is defined by the server: it increments a global round counter
+only after aggregation, and clients poll this counter to detect when the new
+global model is available.  Because FedAvg is synchronous, the server blocks
+aggregation until all $K$ clients have submitted their updates, creating the
+straggler sensitivity formalised in Equation~\ref{eq:tround}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=1.4cm and 3.5cm,
+  box/.style={rectangle, draw, rounded corners, minimum width=2.8cm,
+              minimum height=0.9cm, align=center, font=\small},
+  lbl/.style={font=\scriptsize, midway},
+  >=Stealth
+]
+  \node[box, fill=blue!12] (server) {Server\\(Global Model)};
+  \node[box, fill=orange!12, below left=2.0cm and 2.0cm of server] (c1) {Client 1\\$\mathcal{D}_1$};
+  \node[box, fill=orange!12, below=2.0cm of server] (c2) {Client 2\\$\mathcal{D}_2$};
+  \node[box, fill=orange!12, below right=2.0cm and 2.0cm of server] (ck) {Client $K$\\$\mathcal{D}_K$};
+
+  \draw[->, thick, blue!60!black] (server.south west) -- (c1.north east)
+    node[lbl, above, sloped] {\ding{182} download $\boldsymbol{\theta}^{(r)}$};
+  \draw[->, thick, blue!60!black] (server.south) -- (c2.north)
+    node[lbl, right, pos=0.4] {\ding{182}};
+  \draw[->, thick, blue!60!black] (server.south east) -- (ck.north west)
+    node[lbl, above, sloped] {\ding{182}};
+
+  \draw[->, thick, red!60!black] (c1.north) -- (server.west)
+    node[lbl, above, sloped] {\ding{185} upload $\boldsymbol{\theta}_k^{(r)}$};
+  \draw[->, thick, red!60!black] (c2.north east) -- (server.south east)
+    node[lbl, right, pos=0.5] {\ding{185}};
+  \draw[->, thick, red!60!black] (ck.north) -- (server.east)
+    node[lbl, above, sloped] {\ding{185}};
+
+  \node[font=\scriptsize, below=0.15cm of c1] {\ding{183} train \quad \ding{184} eval};
+  \node[font=\scriptsize, below=0.15cm of c2] {\ding{183} train \quad \ding{184} eval};
+  \node[font=\scriptsize, below=0.15cm of ck] {\ding{183} train \quad \ding{184} eval};
+
+  \node[font=\scriptsize, above=0.15cm of server] {\ding{186} FedAvg aggregation};
+\end{tikzpicture}
+\caption{Per-round lifecycle: \ding{182}~model download,
+  \ding{183}~local training, \ding{184}~local evaluation,
+  \ding{185}~weight upload, \ding{186}~server aggregation.}
+\label{fig:round_lifecycle}
+\end{figure}
+
+\section{Dataset and Data Heterogeneity}
+
+All experiments use the CIFAR-10 benchmark \cite{krizhevsky2009learning}, which
+contains 60{,}000 colour images of size $32 \times 32$ pixels across 10 classes
+(airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck).  The
+standard split provides 50{,}000 training images and 10{,}000 test images.
+CIFAR-10 was chosen because it is well-understood, small enough to train on CPU
+within Docker containers, and widely used in FL research, making results
+comparable to prior work.
+
+The model is a standard ResNet-18 \cite{he2016deep} with the final
+fully-connected layer adjusted to output 10 classes.  The serialised model
+weights occupy approximately 44.8~MB, which defines the per-round upload and
+download payload $B_w$ used throughout the communication cost model
+(Section~\ref{ch:problem}).
+
+\subsection{Non-IID Partitioning via Dirichlet Distribution}
+
+In real FL deployments, each client's data follows a different class distribution.
+To emulate this statistical heterogeneity, the training set is partitioned across
+$K$ clients using a Dirichlet distribution over class labels, following the
+method of Hsu et al.\ \cite{hsu2019measuring}.
+
+For each of the 10 classes, the fraction of that class's samples assigned to each
+client is drawn from $\mathrm{Dir}(\alpha)$, where $\alpha > 0$ is a
+concentration parameter.  Low values of $\alpha$ produce highly skewed
+distributions (some clients see only a few classes), while high values approach
+uniform (IID) partitioning.
+
+All experiments in this thesis use $\alpha = 0.5$, which produces moderate
+heterogeneity: each client sees most classes but with substantially different
+proportions.  This is consistent with the default used in recent FL
+benchmarks and creates a realistic challenge for FedAvg convergence.
+
+\begin{table}[H]
+\centering
+\caption{Effect of the Dirichlet concentration parameter $\alpha$ on data
+         distribution across clients.}
+\label{tab:alpha}
+\begin{tabular}{cl}
+\toprule
+$\alpha$ & Effect on client data distribution \\
+\midrule
+0.1  & Highly non-IID: each client dominated by 1--2 classes \\
+0.5  & Moderately non-IID: unequal proportions across all classes (\textbf{used}) \\
+1.0  & Mildly non-IID: noticeable variation but all classes present \\
+$\infty$ & IID: each client has a uniform class distribution \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Network Impairment Model}
+
+Network conditions are emulated using the Linux Traffic Control (\texttt{tc})
+subsystem with the \texttt{netem} queueing discipline, which is the standard
+kernel-level mechanism for injecting bandwidth limits, latency, and packet loss
+on a per-interface basis.
+
+Each client container runs with the \texttt{NET\_ADMIN} Docker capability.
+Before the Python process starts, an entrypoint script applies a \texttt{tc netem}
+rule to egress (upload) traffic:
+
+\begin{itemize}
+  \item \textbf{Egress (upload):} a \texttt{netem} qdisc is attached to
+        \texttt{eth0} with the configured bandwidth rate, delay, and loss
+        percentage.
+\end{itemize}
+
+Ingress (download) traffic is \emph{not} shaped.  Shaping ingress on Linux
+requires an Intermediate Functional Block (IFB) kernel module, which is
+unavailable on macOS Docker Desktop (LinuxKit VM).  Since all experiments in
+this thesis were conducted on macOS, the configured impairment applies only to
+the upload direction; downloads from the server are effectively unthrottled.
+This is an acceptable simplification because the dominant communication cost in
+FedAvg is the upload of model updates, which are the same size as the
+downloaded global model but occur on the shaped path.  Containers with no
+shaping configured skip the \texttt{tc} commands entirely, providing a clean
+baseline.
+
+Table~\ref{tab:sweep} lists the QoS parameter sweep used in all experiments.
+Each experiment configuration fixes one dimension and varies another while
+holding the third constant, producing a total of $5 + 3 + 3 = 11$ distinct
+configurations (with the baseline shared across sweeps).
+
+\begin{table}[H]
+\centering
+\caption{QoS parameter sweep space.  Bold values indicate the baseline.}
+\label{tab:sweep}
+\begin{tabular}{lll}
+\toprule
+Parameter & Values & Held constant at \\
+\midrule
+Bandwidth & 1, 5, 10, 50, \textbf{100} Mbps & $\tau = 5$ ms, $\rho = 0\%$ \\
+Latency   & \textbf{5}, 50, 200 ms           & $\beta = 100$ Mbps, $\rho = 0\%$ \\
+Packet loss & \textbf{0}, 1, 5\%              & $\beta = 100$ Mbps, $\tau = 5$ ms \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The bandwidth range spans from severely constrained (1~Mbps, representative of a
+congested mobile link) to the unthrottled Docker bridge baseline (100~Mbps).
+Latency values represent local (5~ms), regional (50~ms), and intercontinental
+(200~ms) links.  Packet loss at 5\% represents a degraded wireless channel.
+
+\section{Evaluation Metrics}
+
+Each client and the server collect per-round statistics.
+Table~\ref{tab:metrics} defines the full set of metrics recorded.
+
+\begin{table}[H]
+\centering
+\caption{Per-round metrics collected during each experiment.}
+\label{tab:metrics}
+\begin{tabular}{llp{7.5cm}}
+\toprule
+Metric & Source & Definition \\
+\midrule
+\texttt{get\_model\_ms} & client &
+  Wall-clock time (ms) to download the global model via \texttt{GET /model}. \\
+\texttt{submit\_ms} & client &
+  Wall-clock time (ms) for the \texttt{POST /update} request carrying the
+  updated weight payload. Measured from request start to HTTP response; does
+  not include polling or the subsequent model download. \\
+\texttt{train\_ms} & client &
+  Wall-clock time (ms) for one epoch of local SGD training. \\
+\texttt{wait\_ms} & client &
+  Idle time (ms) spent polling for round completion after submitting.
+  Computed as $T_{\mathrm{wall}} - T_{\mathrm{get}} - T_{\mathrm{train}} -
+  T_{\mathrm{submit}}$, capturing how long a fast client waits for stragglers. \\
+\texttt{submit\_bytes} & client &
+  Size (bytes) of the serialised model weights uploaded.  Constant at
+  $\approx 44.8$~MB for ResNet-18. \\
+\texttt{poll\_count} & client &
+  Number of \texttt{GET /round\_status} polls before the round advances. \\
+\texttt{wire\_tx\_bytes} & client &
+  Total bytes transmitted at the NIC level (from \texttt{/sys/class/net/eth0/statistics/tx\_bytes}).
+  Includes TCP headers, retransmissions, and ACKs. \\
+\texttt{wire\_rx\_bytes} & client &
+  Total bytes received at the NIC level.  Comparing
+  \texttt{wire\_tx\_bytes} to \texttt{submit\_bytes} quantifies
+  retransmission overhead under packet loss. \\
+\texttt{duration\_ms} & server &
+  Wall-clock time (ms) from receiving the first client update to completing
+  FedAvg aggregation for the round. \\
+accuracy / loss & client &
+  Validation accuracy (\%) and cross-entropy loss evaluated on the client's
+  local held-out split after loading the aggregated global model. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two derived metrics are used in the analysis:
+\begin{itemize}
+  \item \textbf{Retransmission overhead}: $\texttt{wire\_tx\_bytes} /
+        \texttt{submit\_bytes}$, expected to be $\approx 1.0$ at 0\% loss and to
+        grow with increasing packet loss.
+  \item \textbf{Rounds to convergence} $R^*$: the first round at which the
+        running-average validation accuracy (window of 3 rounds) plateaus within
+        1 percentage point for 3 consecutive rounds.
+\end{itemize}
+
+\section{Experimental Protocol}
+
+Each point in the QoS parameter sweep (Table~\ref{tab:sweep}) is executed as an
+independent experiment run following Algorithm~\ref{alg:sweep}.  The automation
+script \texttt{run\_experiment.py} generates a Docker Compose file from a YAML
+configuration, builds the container image, starts all services, and collects
+logs after the run completes.
+
+\begin{algorithm}[H]
+\caption{QoS Sweep Protocol}
+\label{alg:sweep}
+\begin{algorithmic}[1]
+\Require Parameter grid $\mathcal{G} = \{(\beta, \tau, \rho)\}$, number of
+         rounds $R = 20$, number of clients $K = 3$
+\For{each $(\beta, \tau, \rho) \in \mathcal{G}$}
+  \State Generate experiment YAML with $(\beta, \tau, \rho)$, $R$, $K$
+  \State Generate Docker Compose file from YAML
+  \State Build container image (cached if unchanged)
+  \State Start server container; wait for healthcheck
+  \State Start $K$ client containers with \texttt{tc netem} applied at boot
+  \For{$r = 0$ \textbf{to} $R - 1$}
+    \State Each client: download $\boldsymbol{\theta}^{(r)}$, train, upload
+           $\boldsymbol{\theta}_k^{(r)}$
+    \State Server: aggregate via FedAvg when all $K$ updates received
+    \State Each client: poll until round advances, download new model, evaluate
+    \State Record all metrics (Table~\ref{tab:metrics}) for round $r$
+  \EndFor
+  \State Collect per-client stats summaries from container logs
+  \State Tear down all containers and network
+\EndFor
+\State Aggregate results across all configurations for analysis
+\end{algorithmic}
+\end{algorithm}
+
+All experiments are run on a single host machine with containers sharing CPU
+resources, eliminating hardware variability.  Network impairment is the only
+controlled variable between configurations.  The CIFAR-10 dataset is downloaded
+once and cached in a Docker volume shared across runs.
+
+%% ══════════════════════════════════════════════════════════════════════════════
+\chapter{Software Implementation}
+\label{ch:impl}
+
+\section{System Overview}
+\label{sec:impl}
+
+The implementation is organised as a Python monorepo with three top-level
+concerns cleanly separated: application logic (\texttt{src/}), container
+infrastructure (\texttt{infra/}), and experiment definitions
+(\texttt{experiments/}).  The project is managed with \texttt{uv} and all
+dependencies are pinned in \texttt{requirements.txt}.  Listing~\ref{lst:repo}
+shows the directory layout.
+
+\begin{lstlisting}[language=bash, caption={Repository structure (key files).},
+  label=lst:repo]
+project-root/
++-- src/
+|   +-- server_main.py          # server entrypoint
+|   +-- client_main.py          # client entrypoint
+|   +-- fl/
+|   |   +-- server_core.py      # FLServer: round mgmt + FedAvg
+|   |   +-- client_core.py      # LocalTrainer: train + eval
+|   |   +-- aggregation.py      # fed_avg()
+|   +-- models/
+|   |   +-- resnet.py           # ResNet-18 (10-class)
+|   +-- data/
+|   |   +-- cifar10.py          # CIFAR-10 + Dirichlet partition
+|   +-- transport/
+|   |   +-- interface.py        # abstract ServerTransport / ClientTransport
+|   |   +-- http_adapter.py     # FastAPI server + httpx client
+|   |   +-- serialization.py    # torch.save / torch.load wrappers
+|   +-- stats/
+|       +-- collector.py        # RoundStats + StatsCollector
+|       +-- netio.py            # NIC tx/rx byte reader
++-- infra/
+|   +-- Dockerfile.ml-base      # container image definition
+|   +-- scripts/
+|   |   +-- entrypoint.sh       # tc netem + exec
+|   |   +-- generate_compose.py # YAML config -> compose.generated.yml
+|   |   +-- run_experiment.py   # build + up + teardown orchestrator
++-- experiments/
+    +-- baseline.yaml
+    +-- heterogeneous.yaml
+    +-- straggler.yaml
+    +-- qos-sweep-bw.yaml
+    +-- scale-5.yaml / scale-10.yaml
+\end{lstlisting}
+
+A central design decision is \textbf{transport-agnostic layering}.  The
+FL logic---model aggregation (\texttt{FLServer}), local training
+(\texttt{LocalTrainer}), and FedAvg (\texttt{fed\_avg})---is completely
+decoupled from the communication mechanism.  Two abstract interfaces,
+\texttt{ServerTransport} and \texttt{ClientTransport}
+(\texttt{transport/interface.py}), define the contract between the FL
+core and any transport implementation.  The current codebase provides an
+HTTP+JSON adapter (\texttt{http\_adapter.py}), but the interface could
+be satisfied by gRPC, WebSockets, or any other protocol without modifying
+the training code.  This separation ensures that the QoS measurements
+reported in Chapter~\ref{ch:qos} reflect the transport layer in
+isolation, independent of training logic.
+
+\section{Docker Compose Architecture}
+
+Each experiment is executed inside a set of Docker containers orchestrated
+by Docker Compose.  A code-generation step translates a declarative
+experiment YAML file into a Compose file, ensuring that every run is
+fully specified and reproducible.
+
+\subsection{Container Image}
+
+All containers---both server and clients---share a single image built from
+\texttt{Dockerfile.ml-base}.  The image is based on
+\texttt{python:3.10-slim} and installs the \texttt{iproute2} package
+(which provides the \texttt{tc} utility for network shaping), along with
+\texttt{curl} for the server healthcheck.  Application code is not baked
+into the image; instead, the repository root is bind-mounted at
+\texttt{/app} at runtime, so rebuilds are only needed when dependencies
+change.  The image's entrypoint is \texttt{entrypoint.sh}, which applies
+network shaping before starting the Python process
+(Section~\ref{sec:netem}).
+
+\subsection{Compose Generation}
+
+The script \texttt{generate\_compose.py} reads an experiment YAML file
+and produces \texttt{infra/compose.generated.yml}.
+Listing~\ref{lst:yaml} shows an example experiment configuration; the
+generated Compose file is excerpted in Listing~\ref{lst:compose}.
+
+\begin{lstlisting}[language=yaml, caption={Experiment configuration
+  (\texttt{heterogeneous.yaml}).}, label=lst:yaml]
+experiment:
+  name: "heterogeneous"
+  rounds: 3
+  num_clients: 3
+  alpha: 0.5      # Dirichlet concentration
+
+server:
+  port: 8000
+
+clients:
+  - id: 1
+    network: { bandwidth: "100mbit", latency: "5ms", loss: "0%" }
+  - id: 2
+    network: { bandwidth: "100mbit", latency: "5ms", loss: "1%" }
+  - id: 3
+    network: { bandwidth: "100mbit", latency: "5ms", loss: "0%" }
+\end{lstlisting}
+
+The generator creates one \texttt{fl-server} service and one
+\texttt{fl-client-\textit{k}} service per client, all attached to a
+shared bridge network (\texttt{fl-net}).  Network shaping parameters are
+passed as environment variables (\texttt{TC\_BANDWIDTH},
+\texttt{TC\_LATENCY}, \texttt{TC\_LOSS}) that the entrypoint script
+reads at boot.  Every container is given the \texttt{NET\_ADMIN}
+capability, which authorises the \texttt{tc} commands.  Client containers
+declare a \texttt{depends\_on} healthcheck on the server, ensuring that
+the FL server's HTTP API is reachable before any client starts training.
+
+\begin{lstlisting}[language=yaml, caption={Excerpt from a generated
+  \texttt{compose.generated.yml}.}, label=lst:compose]
+services:
+  fl-server:
+    image: phase1-fl-ml:latest
+    cap_add: [NET_ADMIN]
+    environment:
+      - ROLE=server
+      - FL_SERVER_PORT=8000
+      - NUM_CLIENTS=3
+      - FL_ROUNDS=3
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+    volumes: ["..:/app"]
+    command: ["python", "-m", "src.server_main"]
+
+  fl-client-1:
+    image: phase1-fl-ml:latest
+    cap_add: [NET_ADMIN]
+    environment:
+      - ROLE=client
+      - CLIENT_ID=1
+      - FL_SERVER_URL=http://fl-server:8000
+      - TC_BANDWIDTH=100mbit
+      - TC_LATENCY=5ms
+      - TC_LOSS=0%
+    depends_on:
+      fl-server: { condition: service_healthy }
+    volumes: ["..:/app"]
+    command: ["python", "-m", "src.client_main"]
+\end{lstlisting}
+
+\section{FL Server}
+
+The server is started by \texttt{server\_main.py}, which builds a
+ResNet-18 model, wraps it in an \texttt{FLServer} instance, and hands
+it to an \texttt{HTTPServerTransport}.  Table~\ref{tab:api} lists the
+HTTP endpoints exposed by the server.
+
+\begin{table}[H]
+\centering
+\caption{FL server REST API.}
+\label{tab:api}
+\begin{tabular}{llp{8cm}}
+\toprule
+Endpoint & Method & Description \\
+\midrule
+\texttt{/health} & GET &
+  Returns \texttt{\{status: ok, round: $r$\}}.  Used by the Docker
+  healthcheck and by clients to wait for readiness. \\
+\texttt{/model} & GET &
+  Returns the current global model weights as a binary
+  \texttt{application/octet-stream} payload ($\approx 44.8$~MB for
+  ResNet-18).  The body is produced by \texttt{torch.save}. \\
+\texttt{/update/\{client\_id\}} & POST &
+  Accepts a client's updated weights as a binary body.  When all $K$
+  clients for the current round have submitted, FedAvg aggregation is
+  triggered synchronously.  Returns \texttt{\{status: accepted,
+  submitted\_round: $r$\}}. \\
+\texttt{/round\_status} & GET &
+  Returns \texttt{\{round: $r$, pending: $p$, expected: $K$\}}.
+  Clients poll this endpoint to detect when aggregation has completed
+  and the round counter has advanced. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Aggregation Logic}
+
+The core aggregation is implemented in \texttt{FLServer.submit\_update()}:
+each call appends the client's state dict to a pending list and checks
+whether all $K$ updates have arrived.  When the list is full, the
+private \texttt{\_aggregate()} method computes FedAvg (an unweighted
+average across all client state dicts), loads the result into the global
+model, clears the pending list, and increments the round counter.  The
+round counter is the single source of truth for round progress---clients
+detect round completion by polling \texttt{/round\_status} and comparing
+the server's round number against the round they submitted for.
+
+The server also records \texttt{duration\_ms} for each round, measured
+from the first update received to the completion of aggregation.  This
+captures both the straggler wait and the aggregation compute time.  After
+all rounds complete, the server's \texttt{done\_event} is set, causing
+the main thread to log a summary and shut down.
+
+\section{FL Client}
+
+Each client is started by \texttt{client\_main.py}, which parses
+arguments from environment variables (injected by Docker Compose), waits
+for the server healthcheck, loads its CIFAR-10 partition, and enters the
+training loop.  The per-round control flow is:
+
+\begin{enumerate}
+  \item \textbf{Capture pre-round NIC counters.}  The function
+        \texttt{read\_interface\_bytes("eth0")} reads the kernel
+        \texttt{/sys/class/net/eth0/statistics/tx\_bytes} and
+        \texttt{rx\_bytes} counters.  These are sampled before and after
+        the round to compute \texttt{wire\_tx\_bytes} and
+        \texttt{wire\_rx\_bytes}.
+
+  \item \textbf{Download global model.}  \texttt{GET /model} fetches the
+        latest global weights.  The client records
+        \texttt{get\_model\_ms} and anchors the round wall-clock timer.
+
+  \item \textbf{Local training.}  The \texttt{LocalTrainer} deep-copies
+        the model, runs $E = 1$ epoch of SGD (Adam optimiser) over the
+        client's local CIFAR-10 partition, and returns the updated state
+        dict along with training loss and accuracy.  The elapsed time is
+        recorded as \texttt{train\_ms}.
+
+  \item \textbf{Upload update.}  \texttt{POST /update/\{client\_id\}}
+        sends the serialised state dict.  The HTTP POST timeout is set
+        to \texttt{None} (unlimited), since a bandwidth-constrained
+        client may take several minutes to upload 44.8~MB.  The elapsed
+        time from request start to HTTP response is recorded as
+        \texttt{submit\_ms}.
+
+  \item \textbf{Poll for aggregation.}  After the POST returns, the
+        client polls \texttt{GET /round\_status} at 0.5\,s intervals
+        until the server's round counter advances past the submitted
+        round.  Each poll increments \texttt{poll\_count}.  Once the
+        round is complete, the client fetches the new global model and
+        records the full round wall-clock time, from which
+        \texttt{wait\_ms} is derived.
+
+  \item \textbf{Evaluate.}  The client evaluates the new global model on
+        its local held-out validation split and logs accuracy and loss.
+
+  \item \textbf{Capture post-round NIC counters.}  A second call to
+        \texttt{read\_interface\_bytes} provides the delta, which is
+        stored as \texttt{wire\_tx\_bytes} and \texttt{wire\_rx\_bytes}
+        for the round.
+\end{enumerate}
+
+After all rounds complete (or an error terminates the loop early), the
+client logs a summary table of all per-round metrics.
+
+\subsection{Data Loading and Non-IID Partitioning}
+
+The module \texttt{src/data/cifar10.py} provides a
+\texttt{get\_client\_loaders()} function that downloads the CIFAR-10
+dataset (cached in the container's filesystem), applies the Dirichlet
+non-IID partitioning described in Section~\ref{ch:method}, and returns a
+\texttt{(train\_loader, val\_loader)} pair for the specified client ID.
+The partition is deterministic for a given seed, ensuring reproducibility
+across runs.  A \texttt{--synthetic} flag is available for smoke tests:
+it substitutes small random tensors, bypassing the dataset download
+entirely.
+
+\subsection{Statistics Collection}
+
+Per-round metrics are managed by the \texttt{StatsCollector} class,
+which maintains a list of \texttt{RoundStats} dataclass instances.
+Each \texttt{RoundStats} holds \texttt{get\_model\_ms},
+\texttt{submit\_ms}, \texttt{train\_ms}, \texttt{wait\_ms},
+\texttt{submit\_bytes}, \texttt{poll\_count}, \texttt{wire\_tx\_bytes},
+and \texttt{wire\_rx\_bytes}.  The \texttt{wait\_ms} field is derived
+automatically: once the full round wall-clock time is known,
+$\texttt{wait\_ms} = T_{\mathrm{wall}} - \texttt{get\_model\_ms} -
+\texttt{train\_ms} - \texttt{submit\_ms}$, capturing the idle time a
+fast client spends waiting for stragglers to finish.
+
+\section{Network Emulation}
+\label{sec:netem}
+
+Network impairment is applied inside each client container at boot time,
+before the Python process starts.  The container's entrypoint script
+(\texttt{entrypoint.sh}) checks whether any \texttt{TC\_*} environment
+variables are set and, if so, applies egress-only shaping.
+Listing~\ref{lst:netem} shows the relevant command.
+
+\begin{lstlisting}[language=bash, caption={Network shaping command from
+  \texttt{entrypoint.sh}.}, label=lst:netem]
+# Egress (upload) shaping on eth0
+tc qdisc add dev eth0 root netem \
+    delay ${TC_LATENCY} rate ${TC_BANDWIDTH} loss ${TC_LOSS}
+\end{lstlisting}
+
+A \texttt{netem} queueing discipline is attached to \texttt{eth0},
+throttling all outgoing (upload) traffic.  Download traffic is not
+shaped: Linux \texttt{tc} cannot directly throttle incoming packets
+without an Intermediate Functional Block (IFB) kernel module, which is
+unavailable inside the LinuxKit VM used by macOS Docker Desktop.
+Because all experiments were run on macOS, only egress shaping is
+applied.  In practice this means model uploads are throttled while
+model downloads from the server proceed at full container network speed.
+Since upload and download payloads are the same size in FedAvg, the
+upload leg dominates observed round time under constrained bandwidth.
+
+If none of the \texttt{TC\_*} variables are set, the script skips all
+shaping and executes the Python process directly, providing a clean
+unimpaired baseline.  The \texttt{NET\_ADMIN} Docker capability is
+required for all \texttt{tc} commands; it is granted in the generated
+Compose file.
+
+\section{Observed Baseline Results}
+
+% TODO: Present actual baseline run data once the full experiment sweep
+% is executed.  The table below should be populated with real log output.
+% Expected format: client | round | get_model_ms | submit_ms | train_ms |
+%   wait_ms | submit_bytes | wire_tx_bytes | wire_rx_bytes
+% Baseline config: 100 Mbps, 5 ms latency, 0% loss, 20 rounds, 3 clients.
+% Key observations to highlight:
+%   - submit_bytes constant at ~44.8 MB (confirms fixed payload)
+%   - submit_ms reflects egress shaping; get_model_ms is unthrottled
+%   - wait_ms near zero when all clients have identical network conditions
+%   - wire_tx_bytes / submit_bytes ratio close to 1.0 at 0% loss
+%   - Accuracy progression over 20 rounds
+
+%% ══════════════════════════════════════════════════════════════════════════════
+\chapter{QoS Analysis and Results}
+\label{ch:qos}
+%% ══════════════════════════════════════════════════════════════════════════════
+
+\section{Theoretical Throughput Analysis}
+\label{sec:model}
+
+Before running experiments, we can derive the expected communication time
+from first principles.  The serialised ResNet-18 state dict is
+$B_w = 44{,}797{,}387$ bytes ($\approx 44.8$~MB), which is constant
+across all rounds and clients (confirmed empirically by the
+\texttt{submit\_bytes} metric).  Because only egress (upload) traffic is
+shaped, the upload direction is the bottleneck; downloads from the
+server traverse the unthrottled ingress path and complete in negligible
+time relative to the shaped upload.
+
+The minimum theoretical upload time at bandwidth $\beta$ (bits per
+second) with packet loss $\rho$ is:
+\begin{equation}
+  T_{\mathrm{xfer}}(\beta, \rho) = \frac{8 \times B_w}{\beta \times (1 - \rho)}
+  \label{eq:xfer_time}
+\end{equation}
+
+The per-round communication time (excluding training) is dominated by
+the upload:
+\begin{equation}
+  T_{\mathrm{comm}} \approx T_{\mathrm{upload}} + \alpha \cdot \tau
+  = T_{\mathrm{xfer}}(\beta, \rho) + \alpha \cdot \tau
+  \label{eq:tcomm_applied}
+\end{equation}
+
+where $\tau$ is one-way latency and $\alpha$ accounts for TCP handshake
+round-trips and HTTP request/response overhead.  The download term is
+omitted because ingress traffic is not shaped (see
+Section~\ref{sec:netem}).
+
+Table~\ref{tab:theory} applies Equation~\ref{eq:xfer_time} across the
+bandwidth sweep at $\rho = 0\%$ to predict upload time per round.
+
+\begin{table}[H]
+\centering
+\caption{Theoretical minimum upload time per round at each bandwidth
+  ($B_w = 44.8$~MB, $\rho = 0\%$).  Download is unthrottled.}
+\label{tab:theory}
+\begin{tabular}{rrrl}
+\toprule
+$\beta$ (Mbps) & Upload (s) & Comm.\ time (s) & Practical? \\
+\midrule
+  1   & 358.4 & $\approx$358 & Impractical ($>$5 min/round) \\
+  5   &  71.7 & $\approx$72  & Marginal ($>$1 min/round) \\
+ 10   &  35.8 & $\approx$36  & Marginal \\
+ 50   &   7.2 & $\approx$7   & Feasible \\
+100   &   3.6 & $\approx$4   & Baseline \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Several observations follow from this analysis:
+
+\begin{itemize}
+  \item At 1~Mbps, a single round requires over 11 minutes of pure data
+        transfer alone, before accounting for TCP overhead, training
+        time, or polling.  Over 20 rounds, this amounts to nearly 4
+        hours of communication cost.
+  \item The communication-to-computation ratio shifts dramatically across
+        the bandwidth range.  At 100~Mbps, training ($\approx 5$~s)
+        dominates; at 1~Mbps, communication is $>$70$\times$ longer
+        than training.
+  \item The theoretical prediction does \emph{not} account for TCP
+        retransmission overhead under packet loss, congestion window
+        dynamics, or HTTP framing overhead.  Empirical measurements
+        (Section~\ref{sec:bw_results}) are expected to exceed these
+        lower bounds.
+\end{itemize}
+
+Based on this analysis, a \textbf{throughput floor} is predicted near
+$\beta^* \approx 10$--$50$~Mbps.  Below 10~Mbps, per-round
+communication time exceeds one minute even under ideal conditions,
+making multi-round convergence prohibitively slow for synchronous
+FedAvg with a 44.8~MB payload.
+
+\section{Convergence Results}
+\label{sec:results}
+
+This section presents the empirical results from the QoS parameter sweep
+defined in Section~\ref{ch:method}.  Each subsection isolates one
+network parameter while holding the others at their baseline values.
+
+\subsection{Effect of Bandwidth on Convergence}
+\label{sec:bw_results}
+
+Figure~\ref{fig:convergence_bw} plots validation accuracy against FL
+round number for each bandwidth level in the sweep ($\tau = 5$~ms,
+$\rho = 0\%$).
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.85\textwidth, height=7cm,
+  xlabel={FL Round}, ylabel={Validation Accuracy (\%)},
+  xmin=0, xmax=20, ymin=0, ymax=85,
+  legend pos=south east,
+  grid=major, grid style={dotted,gray!50},
+  title={Convergence curves at varying bandwidth ($\tau=5$ ms, $\rho=0\%$)},
+  cycle list name=color list
+]
+%% PLACEHOLDER — replace with actual experimental data
+\addplot+[thick] coordinates {(0,10)(5,40)(10,55)(15,68)(20,76)};
+\addlegendentry{100 Mbps}
+\addplot+[thick] coordinates {(0,10)(5,38)(10,52)(15,64)(20,73)};
+\addlegendentry{50 Mbps}
+\addplot+[thick, dashed] coordinates {(0,10)(5,30)(10,45)(15,56)(20,65)};
+\addlegendentry{10 Mbps}
+\addplot+[thick, dashed] coordinates {(0,10)(5,22)(10,35)(15,44)(20,51)};
+\addlegendentry{5 Mbps}
+\addplot+[thick, dotted, very thick] coordinates {(0,10)(5,14)(10,19)(15,23)(20,26)};
+\addlegendentry{1 Mbps}
+\end{axis}
+\end{tikzpicture}
+\caption{Validation accuracy over FL rounds at varying client bandwidth.
+  \textbf{[Placeholder --- replace with empirical data from the bandwidth sweep.]}}
+\label{fig:convergence_bw}
+\end{figure}
+
+% TODO: After running experiments, describe:
+%   - At 100 and 50 Mbps: convergence curves should be nearly identical,
+%     confirming that above the throughput floor, bandwidth does not limit accuracy.
+%   - At 10 Mbps: slight degradation — rounds complete but take longer.
+%   - At 5 Mbps: noticeable accuracy gap — TCP retransmission overhead under
+%     even minimal congestion may cause partial round disruption.
+%   - At 1 Mbps: convergence stalls or is extremely slow.
+
+Figure~\ref{fig:round_duration_bw} shows the mean round duration at each
+bandwidth level.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.85\textwidth, height=6cm,
+  xlabel={Bandwidth (Mbps)}, ylabel={Mean Round Duration (s)},
+  xmode=log, log ticks with fixed point,
+  xtick={1,5,10,50,100},
+  ymin=0,
+  grid=major, grid style={dotted,gray!50},
+  title={Mean round duration vs.\ client bandwidth ($\tau=5$ ms, $\rho=0\%$)},
+]
+%% PLACEHOLDER — replace with actual data
+\addplot+[mark=*, thick, blue] coordinates {(1,370)(5,78)(10,42)(50,14)(100,10)};
+\addlegendentry{Mean $T_{\mathrm{round}}$}
+\addplot+[thick, dashed, red, domain=1:100, samples=50] {7.2 + 716.8/x};
+\addlegendentry{Theoretical (Eq.~\ref{eq:xfer_time})}
+\end{axis}
+\end{tikzpicture}
+\caption{Mean round duration as a function of bandwidth, with the
+  theoretical lower bound overlaid.
+  \textbf{[Placeholder --- replace with empirical data.]}}
+\label{fig:round_duration_bw}
+\end{figure}
+
+% TODO: After running experiments, note how much empirical round duration
+% exceeds the theoretical lower bound, and attribute the gap to TCP overhead,
+% HTTP framing, polling latency, and training time.
+
+\subsection{Effect of Latency on Round Duration}
+
+Figure~\ref{fig:latency_round} plots mean round duration as a function
+of one-way latency ($\beta = 100$~Mbps, $\rho = 0\%$).
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.85\textwidth, height=6cm,
+  xlabel={One-Way Latency (ms)}, ylabel={Mean Round Duration (s)},
+  xtick={5,50,200},
+  xmode=log, log ticks with fixed point,
+  ymin=0,
+  grid=major, grid style={dotted,gray!50},
+  title={Round duration vs.\ one-way latency ($\beta=100$ Mbps, $\rho=0\%$)},
+]
+%% PLACEHOLDER — replace with experimental data
+\addplot+[mark=*, thick] coordinates {(5,10)(50,13)(200,20)};
+\addlegendentry{Mean $T_{\mathrm{round}}$}
+\end{axis}
+\end{tikzpicture}
+\caption{Mean FL round duration as a function of one-way latency.
+  \textbf{[Placeholder --- replace with empirical data.]}}
+\label{fig:latency_round}
+\end{figure}
+
+% TODO: After running experiments, describe:
+%   - At 5 ms: baseline, latency is negligible relative to transfer time.
+%   - At 50 ms: moderate increase in round duration due to TCP round-trips
+%     (handshake, slow-start, ACK delays).
+%   - At 200 ms: significant increase.  Each TCP round-trip adds 400 ms RTT;
+%     with dozens of round-trips in a 44.8 MB transfer, the cumulative
+%     effect is substantial.
+
+\subsection{Accuracy-Bandwidth Degradation Model}
+
+To quantify the relationship between bandwidth and final model accuracy,
+a sigmoid degradation model is fitted to the measured data:
+\begin{equation}
+  A(\beta) = A_{\max} \cdot \sigma\!\left(\alpha_1 \ln(\beta) - \alpha_2\right)
+  \label{eq:sigmoid_model}
+\end{equation}
+where $A_{\max}$ is the maximum achievable accuracy (at the baseline
+bandwidth), $\sigma(\cdot)$ is the logistic function, and
+$\alpha_1, \alpha_2$ are fitted parameters.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.78\textwidth, height=6cm,
+  xlabel={Client Bandwidth (Mbps)}, ylabel={Final Accuracy (\%) after 20 rounds},
+  xmode=log, log ticks with fixed point,
+  xtick={1,5,10,50,100},
+  ymin=0, ymax=100,
+  grid=major, grid style={dotted,gray!50},
+  title={Accuracy-bandwidth degradation curve},
+]
+%% PLACEHOLDER — replace with measured data and fitted curve
+\addplot+[mark=*, thick, blue] coordinates {(1,26)(5,51)(10,65)(50,73)(100,76)};
+\addlegendentry{Measured}
+\addplot[domain=1:100, samples=100, thick, red, dashed]
+  {76/(1+exp(-2.1*(ln(x/ln(10))-0.8)))};
+\addlegendentry{Fitted sigmoid (Eq.~\ref{eq:sigmoid_model})}
+\draw[dashed, gray, thick] (axis cs:10,0) -- (axis cs:10,100)
+  node[above, font=\small]{$\beta^*$};
+\end{axis}
+\end{tikzpicture}
+\caption{Final model accuracy as a function of client bandwidth with
+  sigmoid fit.  The dashed vertical line marks the identified throughput
+  floor $\beta^*$.
+  \textbf{[Placeholder --- replace with empirical data and fitted parameters.]}}
+\label{fig:acc_vs_bw}
+\end{figure}
+
+% TODO: After running experiments, fit the sigmoid model to the actual
+% 5 data points (one per bandwidth level) and report the fitted alpha_1,
+% alpha_2 values and goodness of fit (R^2).
+
+\section{Effect of Packet Loss}
+\label{sec:loss_results}
+
+Packet loss triggers TCP retransmission, which increases the effective
+transfer time and consumes additional bandwidth.  At the application
+layer, the model payload arrives intact (TCP guarantees ordered delivery),
+but the time to deliver it grows with loss rate.  The
+\texttt{wire\_tx\_bytes} metric captures this directly: the ratio
+$\texttt{wire\_tx\_bytes} / \texttt{submit\_bytes}$ quantifies
+retransmission overhead.
+
+\begin{table}[H]
+\centering
+\caption{Effect of packet loss on round duration and retransmission
+  overhead ($\beta = 100$~Mbps, $\tau = 5$~ms).
+  \textbf{[Populate with experimental data.]}}
+\label{tab:loss}
+\begin{tabular}{rrrrl}
+\toprule
+Loss (\%) & Mean round (s) & Mean \texttt{submit\_ms} (s) &
+  Retx.\ overhead & Effect on accuracy \\
+\midrule
+0 & --- & --- & $\approx 1.0\times$ & Baseline \\
+1 & --- & --- & --- & --- \\
+5 & --- & --- & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% TODO: After running experiments, fill in Table~\ref{tab:loss} and discuss:
+%   - At 0% loss: retransmission overhead is ~1.0x (only TCP/HTTP headers).
+%   - At 1% loss: modest overhead; round duration increases slightly.
+%   - At 5% loss: significant retransmission overhead; combined with low
+%     bandwidth, this compounds the straggler effect.
+%   - Does packet loss affect final accuracy, or only round duration?
+%     (If the model always arrives intact via TCP, accuracy should be
+%     unaffected unless timeouts cause round failures.)
+
+\section{Summary of QoS Findings}
+
+Table~\ref{tab:summary_qos} consolidates the key findings across all
+three QoS dimensions.
+
+\begin{table}[H]
+\centering
+\caption{Summary of QoS impact on FL performance.
+  \textbf{[Populate with measured values from the sweep.]}}
+\label{tab:summary_qos}
+\begin{tabular}{llll}
+\toprule
+Parameter & Low (degraded) & Moderate & High (baseline) \\
+\midrule
+Bandwidth & 1--5 Mbps & 10--50 Mbps & 100 Mbps \\
+Round duration & --- & --- & --- \\
+Final accuracy & --- & --- & Baseline \\
+\midrule
+Latency & 200 ms & 50 ms & 5 ms \\
+Round duration & --- & --- & --- \\
+Final accuracy & --- & --- & Baseline \\
+\midrule
+Packet loss & 5\% & 1\% & 0\% \\
+Retx.\ overhead & --- & --- & $\approx 1.0\times$ \\
+Final accuracy & --- & --- & Baseline \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% TODO: After running experiments, write 2-3 paragraphs summarising:
+%   1. The throughput floor beta* value and its practical meaning.
+%   2. Whether latency or bandwidth is the dominant factor.
+%   3. The interaction between packet loss and bandwidth.
+%   4. Answer to each research question (RQ1, RQ2, RQ3).
+
+%% ══════════════════════════════════════════════════════════════════════════════
+\chapter{Future Research Directions}
+\label{ch:future}
+%% ══════════════════════════════════════════════════════════════════════════════
+
+\section{Network-Aware Client Admission}
+\label{sec:future}
+
+The throughput floor $\beta^*$ identified in Section~\ref{sec:results}
+suggests a straightforward client admission criterion for synchronous FL
+deployments.  Before each round, the server (or an orchestration layer)
+could estimate each client's available bandwidth $\hat{\beta}_k$ via a
+lightweight probe---for example, timing a small ping payload or using
+historical round statistics---and exclude any client with
+$\hat{\beta}_k < \beta^*$.
+
+This connects directly to RQ3: if a simple threshold over $\beta_k$,
+$\tau_k$, and $\rho_k$ can identify clients that would become stragglers,
+the server can protect round duration and convergence integrity by
+skipping those clients for that round.  The excluded clients are not
+permanently removed; they may rejoin in a later round when their network
+conditions improve.  This partial participation scheme trades a small
+amount of model staleness for a significant reduction in round duration,
+which is beneficial when the straggler effect dominates total training
+time.
+
+\section{Network Security Analysis}
+
+The current framework provides no adversarial modelling.  In a real FL
+deployment, several network-level and protocol-level attacks are relevant:
+
+\begin{itemize}
+  \item \textbf{Byzantine fault tolerance:} A malicious client could
+        submit poisoned model updates designed to degrade the global
+        model.  Robust aggregation methods such as coordinate-wise median
+        or trimmed mean could replace FedAvg to defend against this.
+  \item \textbf{Gradient inference attacks:} An eavesdropper on the
+        network, or a compromised server, could attempt to reconstruct
+        private training data from observed model updates.  Secure
+        aggregation or differential privacy could mitigate this.
+  \item \textbf{Man-in-the-middle attacks:} The current HTTP transport
+        does not use TLS.  Adding HTTPS would protect weight payloads
+        in transit.
+\end{itemize}
+
+The open, Docker-based architecture of this simulator makes it
+straightforward to inject these attack scenarios---a malicious client
+container could be added alongside honest ones, and the impact on
+convergence measured under the same QoS sweep.  This is a natural
+extension for future security-focused research.
+
+\section{UI for Network Feasibility Assessment}
+
+A practical application of the throughput floor model is an interactive
+tool where a practitioner enters their network profile---available
+bandwidth, expected latency, and loss rate---and the system estimates
+whether their infrastructure can support FL at a given scale.  The tool
+would use the empirical throughput-convergence model
+(Equation~\ref{eq:sigmoid_model}) to predict expected round duration,
+time to convergence, and final accuracy for the entered network
+conditions.
+
+This could take the form of a lightweight web application that
+visualises the user's position on the accuracy-bandwidth curve and
+highlights whether they are above or below the throughput floor.  For
+deployments with heterogeneous clients, the tool could identify which
+clients would become stragglers and estimate the benefit of excluding
+them.
+
+\section{Asynchronous Federated Learning}
+
+The synchronous FedAvg protocol used in this thesis is inherently
+straggler-sensitive: the slowest client dictates the round duration
+(Equation~\ref{eq:tround}).  Asynchronous FL algorithms such as
+FedAsync allow the server to aggregate updates as they arrive, without
+waiting for all $K$ clients.  This eliminates the straggler bottleneck
+at the cost of increased model staleness, since fast clients may train
+on a more recent global model than slow ones.
+
+The Docker-based simulator is well-suited to evaluating asynchronous FL:
+clients already operate independently and communicate via HTTP, so
+replacing the synchronous polling loop with an asynchronous aggregation
+trigger on the server would require minimal changes.  Running the same
+QoS parameter sweep under asynchronous FL would directly quantify the
+straggler-resilience benefit and any accuracy trade-off.
+
+\section{Scaling and HPC Cluster Deployment}
+
+The current experiments use $K = 3$ clients on a single host machine.
+While this is sufficient to demonstrate the QoS-convergence
+relationship, real FL deployments may involve tens to hundreds of
+clients.  The Docker-based architecture scales naturally: additional
+client entries in the experiment YAML produce additional containers.
+However, system RAM becomes the limiting factor---each ResNet-18
+client process requires approximately 200--400~MB of memory, so a
+machine with 16~GB of RAM can support roughly 30--40 concurrent
+clients.
+
+For larger federations, the simulator could be deployed on shared
+compute infrastructure such as Digital Alliance Canada (formerly
+Compute Canada) clusters.  Each client container would map to a
+separate job or pod, and the \texttt{tc netem} shaping would emulate
+the WAN conditions between geographically distributed nodes.  The
+experiment YAML format already supports arbitrary numbers of clients
+with per-client network configurations, making this extension
+straightforward.
+
+\section{Symmetric and Asymmetric Network Impairment}
+
+The current implementation shapes only egress (upload) traffic via \texttt{tc netem}.
+Ingress (download) shaping requires an Intermediate Functional Block (IFB) kernel
+module, which is not available inside the LinuxKit VM used by macOS Docker Desktop.
+As a result, all experiments in this thesis apply shaping to the upload direction
+only; model downloads from the server are unthrottled.
+
+On a native Linux host the IFB module is readily available, making it
+straightforward to add symmetric or independently configurable uplink/downlink
+shaping.  This would enable experiments under realistic asymmetric conditions---for
+example, home broadband connections that offer significantly higher download
+bandwidth than upload bandwidth---without changes to the core FL logic.
+
+Additional impairment dimensions such as bursty packet loss, jitter, and
+packet reordering are similarly easy to add through additional \texttt{tc netem}
+parameters.
+
+%% ══════════════════════════════════════════════════════════════════════════════
+\chapter{Conclusion}
+\label{ch:conclusion}
+%% ══════════════════════════════════════════════════════════════════════════════
+
+This thesis has presented a systematic empirical investigation of the
+impact of network Quality of Service parameters on federated learning
+convergence.  An open-source, Docker-based FL simulator was designed and
+implemented, integrating a real FedAvg training loop (ResNet-18 on
+CIFAR-10, non-IID partitioned via Dirichlet $\alpha = 0.5$) with
+kernel-level network emulation via \texttt{tc netem}.  The simulator
+applies per-client egress (upload) bandwidth, latency, and packet loss
+shaping, enabling reproducible experiments under controlled network
+conditions.
+
+A QoS parameter sweep across five bandwidth levels (1, 5, 10, 50,
+100~Mbps), three latency values (5, 50, 200~ms), and three packet loss
+rates (0\%, 1\%, 5\%) was conducted over 20 FL rounds with $K = 3$
+clients.
+% TODO: Fill in the following once sweep results are available:
+%   - Specific throughput floor beta* value
+%   - Final accuracy at baseline vs. degraded conditions
+%   - Whether accuracy was affected or only round duration
+%   - Sigmoid model fit parameters
+
+Theoretical analysis predicted a throughput floor near 10--50~Mbps for
+the 44.8~MB ResNet-18 payload, below which per-round communication time
+exceeds one minute.
+% TODO: Confirm or refine with empirical results.
+
+The practical implications of these findings are threefold.  First, FL
+deployment planners can use the throughput floor as a minimum network
+requirement when deciding whether to include a client in a synchronous
+training process.  Second, the accuracy-bandwidth degradation model
+(Equation~\ref{eq:sigmoid_model}) provides a quantitative tool for
+predicting the cost of operating under bandwidth constraints.  Third, the
+\texttt{wait\_ms} and straggler metrics demonstrate that a single
+slow client can dominate round duration for the entire federation,
+motivating network-aware client selection policies.
+
+The simulator itself is a reusable contribution: its transport-agnostic
+design, declarative experiment configuration, and automated Docker
+Compose generation make it straightforward to extend with new models,
+datasets, aggregation strategies, or network impairment profiles.  Future
+work (Chapter~\ref{ch:future}) includes asymmetric link modelling,
+asynchronous FL, network security analysis, and scaling to larger
+federations on HPC infrastructure.
+
+%% ── References ────────────────────────────────────────────────────────────────
+\bibliographystyle{IEEEtran}
+\begin{thebibliography}{99}
+
+\bibitem{mcmahan2017communication}
+B.~McMahan, E.~Moore, D.~Ramage, S.~Hampson, and B.~A.~y~Arcas,
+``Communication-efficient learning of deep networks from decentralized data,''
+in \emph{Proc.\ 20th International Conference on Artificial Intelligence and
+Statistics (AISTATS)}, 2017, pp.\ 1273--1282.
+
+\bibitem{li2020fedprox}
+T.~Li, A.~K.~Sahu, M.~Zaheer, M.~Sanjabi, A.~Talwalkar, and V.~Smith,
+``Federated optimization in heterogeneous networks,''
+in \emph{Proc.\ Machine Learning and Systems (MLSys)}, 2020.
+
+\bibitem{li2020federated}
+T.~Li, A.~K.~Sahu, A.~Talwalkar, and V.~Smith,
+``Federated learning: Challenges, methods, and future directions,''
+\emph{IEEE Signal Processing Magazine}, vol.~37, no.~3, pp.\ 50--60, 2020.
+
+\bibitem{konevcny2016federated}
+J.~Kone\v{c}n\'{y}, H.~B.~McMahan, F.~X.~Yu, P.~Richt\'{a}rik,
+A.~T.~Suresh, and D.~Bacon,
+``Federated learning: Strategies for improving communication efficiency,''
+\emph{arXiv preprint arXiv:1610.05492}, 2016.
+
+\bibitem{ns3}
+{The ns-3 Consortium},
+``The ns-3 network simulator,''
+\url{https://www.nsnam.org}, accessed 2025.
+
+\bibitem{omnetpp}
+A.~Varga and R.~Hornig,
+``An overview of the OMNeT++ simulation environment,''
+in \emph{Proc.\ 1st International Conference on Simulation Tools and
+Techniques (SIMUTools)}, 2008.
+
+\bibitem{beutel2020flower}
+D.~J.~Beutel, T.~Tober, D.~Dobre, M.~Sber\v{c}, A.~Becker, and N.~Lane,
+``Flower: A friendly federated learning research framework,''
+\emph{arXiv preprint arXiv:2007.14390}, 2020.
+
+\bibitem{tff}
+K.~Bonawitz \emph{et~al.},
+``Towards federated learning at scale: A system design,''
+in \emph{Proc.\ Machine Learning and Systems (MLSys)}, 2019.
+
+\bibitem{lim2020federated}
+W.~Y.~B.~Lim \emph{et~al.},
+``Federated learning in mobile edge networks: A comprehensive survey,''
+\emph{IEEE Communications Surveys \& Tutorials}, vol.~22, no.~3,
+pp.\ 2031--2063, 2020.
+
+\bibitem{nishio2019client}
+T.~Nishio and R.~Yonetani,
+``Client selection for federated learning with heterogeneous resources
+in mobile edge,''
+in \emph{Proc.\ IEEE International Conference on Communications (ICC)}, 2019.
+
+\bibitem{lai2021oort}
+F.~Lai, X.~Zhu, H.~V.~Madhyastha, and M.~Zaharia,
+``Oort: Efficient federated learning via guided participant selection,''
+in \emph{Proc.\ 15th USENIX Symposium on Operating Systems Design and
+Implementation (OSDI)}, 2021, pp.\ 19--35.
+
+\bibitem{krizhevsky2009learning}
+A.~Krizhevsky,
+``Learning multiple layers of features from tiny images,''
+Technical Report, University of Toronto, 2009.
+
+\bibitem{he2016deep}
+K.~He, X.~Zhang, S.~Ren, and J.~Sun,
+``Deep residual learning for image recognition,''
+in \emph{Proc.\ IEEE Conference on Computer Vision and Pattern Recognition
+(CVPR)}, 2016, pp.\ 770--778.
+
+\bibitem{hsu2019measuring}
+T.-M.~H.~Hsu, H.~Qi, and M.~Brown,
+``Measuring the effects of non-identical data distribution for federated
+visual classification,''
+\emph{arXiv preprint arXiv:1909.06335}, 2019.
+
+\end{thebibliography}
+
+\end{document}
