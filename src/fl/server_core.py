@@ -3,8 +3,10 @@
 See docs/architecture.md (FL Server) and migration-map.md.
 """
 
+import json
 import logging
 import time
+from pathlib import Path
 from threading import Event
 from typing import List, Optional
 
@@ -79,3 +81,17 @@ class FLServer:
         for r in self._round_records:
             log.info("%6d  %14.1f", r.round_num, r.duration_ms)
         log.info(sep)
+
+    def save_json(self, filepath: str | Path, experiment_name: str) -> None:
+        filepath = Path(filepath)
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "experiment": experiment_name,
+            "num_clients": self.num_clients,
+            "num_rounds": self.num_rounds,
+            "rounds": [
+                {"round": r.round_num, "duration_ms": r.duration_ms}
+                for r in self._round_records
+            ],
+        }
+        filepath.write_text(json.dumps(payload, indent=2))

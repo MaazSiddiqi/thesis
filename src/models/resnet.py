@@ -1,4 +1,4 @@
-"""ResNet18 architecture for HAM10000 (7-class skin lesion classification).
+"""ResNet18 architecture for image classification.
 
 Extracted from reference FL_ResNet_HAM10000.py.
 See docs/phase-01/migration-map.md for provenance.
@@ -99,6 +99,6 @@ class ResNet18(nn.Module):
         return x
 
 
-def build_resnet18(num_classes: int = 7) -> ResNet18:
-    """Convenience factory matching the reference configuration."""
+def build_resnet18(num_classes: int = 10) -> ResNet18:
+    """Convenience factory; defaults to 10 classes for CIFAR-10."""
     return ResNet18(BasicBlock, [2, 2, 2, 2], num_classes)

@@ -26,7 +26,7 @@ def main():
     parser.add_argument("--port", type=int, default=int(os.environ.get("FL_SERVER_PORT", "8000")))
     parser.add_argument("--num-clients", type=int, default=int(os.environ.get("NUM_CLIENTS", "2")))
     parser.add_argument("--num-rounds", type=int, default=int(os.environ.get("FL_ROUNDS", "1")))
-    parser.add_argument("--num-classes", type=int, default=7)
+    parser.add_argument("--num-classes", type=int, default=10)
     args = parser.parse_args()
 
     experiment_name = os.environ.get("EXPERIMENT_NAME", "unknown")
@@ -67,6 +67,17 @@ def main():
         args.num_rounds,
     )
     fl_server.log_summary()
+
+    results_dir = f"/app/results/{experiment_name}"
+    fl_server.save_json(f"{results_dir}/server.json", experiment_name)
+    log.info("Server stats saved to %s/server.json", results_dir)
+
+    # Give clients time to save their JSON before we exit. The server exiting
+    # first triggers docker compose --abort-on-container-exit and SIGTERMs
+    # clients before they can persist; delaying here lets clients save first.
+    import time as _time
+    _time.sleep(15)
+
     log.info("All %d rounds complete. Shutting down.", args.num_rounds)
     transport.stop()
 

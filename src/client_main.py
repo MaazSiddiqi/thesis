@@ -16,9 +16,11 @@ import time
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
+from src.data.cifar10 import get_client_loaders
 from src.fl.client_core import LocalTrainer
 from src.models.resnet import build_resnet18
 from src.stats.collector import StatsCollector
+from src.stats.netio import read_interface_bytes
 from src.transport.http_adapter import HTTPClientTransport
 from src.transport.serialization import bytes_to_state_dict
 
@@ -26,9 +28,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [CLIENT %(client_id)
 log = logging.getLogger(__name__)
 
 
-def _make_synthetic_loaders(num_samples: int = 64, num_classes: int = 7, batch_size: int = 16):
+def _make_synthetic_loaders(num_samples: int = 64, num_classes: int = 10, batch_size: int = 16):
     """Create tiny random data loaders for smoke testing without the real dataset."""
-    images = torch.randn(num_samples, 3, 64, 64)
+    images = torch.randn(num_samples, 3, 32, 32)
     labels = torch.randint(0, num_classes, (num_samples,))
     ds = TensorDataset(images, labels)
     train_loader = DataLoader(ds, batch_size=batch_size, shuffle=True)
@@ -59,9 +61,13 @@ def main():
     parser.add_argument("--rounds", type=int, default=int(os.environ.get("FL_ROUNDS", "1")))
     parser.add_argument("--lr", type=float, default=float(os.environ.get("FL_LR", "0.0001")))
     parser.add_argument("--local-epochs", type=int, default=int(os.environ.get("FL_LOCAL_EPOCHS", "1")))
-    parser.add_argument("--num-classes", type=int, default=7)
-    parser.add_argument("--synthetic", action="store_true", default=True,
-                        help="Use synthetic data for smoke testing (default for phase-01)")
+    parser.add_argument("--num-classes", type=int, default=10)
+    parser.add_argument("--num-clients", type=int, default=int(os.environ.get("NUM_CLIENTS", "1")))
+    parser.add_argument("--alpha", type=float, default=float(os.environ.get("FL_ALPHA", "0.5")),
+                        help="Dirichlet concentration for non-IID partitioning")
+    parser.add_argument("--synthetic", action="store_true",
+                        default=os.environ.get("USE_SYNTHETIC", "false").lower() == "true",
+                        help="Use synthetic random data instead of CIFAR-10 (for smoke tests)")
     args = parser.parse_args()
 
     experiment_name = os.environ.get("EXPERIMENT_NAME", "unknown")
@@ -89,7 +95,21 @@ def main():
 
     had_error = False
 
-    train_loader, test_loader = _make_synthetic_loaders()
+    if args.synthetic:
+        log.info("Using synthetic data (smoke-test mode)")
+        train_loader, test_loader = _make_synthetic_loaders(num_classes=args.num_classes)
+    else:
+        log.info(
+            "Loading CIFAR-10 for client %d / %d (alpha=%.2f)",
+            args.client_id,
+            args.num_clients,
+            args.alpha,
+        )
+        train_loader, test_loader = get_client_loaders(
+            client_id=args.client_id,
+            num_clients=args.num_clients,
+            alpha=args.alpha,
+        )
 
     trainer = LocalTrainer(
         client_id=args.client_id,
@@ -105,6 +125,8 @@ def main():
     for rnd in range(args.rounds):
         collector.start_round(rnd)
         try:
+            tx_before, rx_before = read_interface_bytes()
+
             log.info("Round %d: fetching global model", rnd)
             global_sd = transport.get_global_model()
             model.load_state_dict(global_sd)
@@ -113,13 +135,18 @@ def main():
             train_start = time.monotonic()
             updated_sd, train_loss, train_acc = trainer.train(model)
             collector.record_train((time.monotonic() - train_start) * 1000)
+            collector.record_train_metrics(train_loss, train_acc)
             log.info("Round %d: train loss=%.4f acc=%.2f%%", rnd, train_loss, train_acc)
 
             log.info("Round %d: submitting update to server", rnd)
             new_global_sd = transport.submit_update(args.client_id, updated_sd)
             model.load_state_dict(new_global_sd)
 
+            tx_after, rx_after = read_interface_bytes()
+            collector.record_wire_bytes(tx_after - tx_before, rx_after - rx_before)
+
             eval_loss, eval_acc = trainer.evaluate(model)
+            collector.record_eval_metrics(eval_loss, eval_acc)
             log.info("Round %d: eval  loss=%.4f acc=%.2f%%", rnd, eval_loss, eval_acc)
         except Exception as exc:
             had_error = True
@@ -147,6 +174,25 @@ def main():
         tc_loss,
     )
     collector.log_summary(args.client_id, log)
+
+    results_dir = f"/app/results/{experiment_name}"
+    collector.save_json(
+        filepath=f"{results_dir}/client-{args.client_id}.json",
+        client_id=args.client_id,
+        experiment_name=experiment_name,
+        config={
+            "rounds": args.rounds,
+            "num_clients": args.num_clients,
+            "alpha": args.alpha,
+            "bandwidth": tc_bw,
+            "latency": tc_lat,
+            "loss": tc_loss,
+            "lr": args.lr,
+            "local_epochs": args.local_epochs,
+            "synthetic": args.synthetic,
+        },
+    )
+    log.info("Stats saved to %s/client-%d.json", results_dir, args.client_id)
 
 
 if __name__ == "__main__":

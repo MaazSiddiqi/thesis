@@ -103,6 +103,7 @@ class HTTPClientTransport(ClientTransport):
         self.timeout = timeout
         self.poll_interval = poll_interval
         self._stats = stats
+        self._round_start: Optional[float] = None
 
     def _fetch_global_model(self) -> StateDict:
         """Raw model fetch without stats recording (used internally by submit_update)."""
@@ -111,11 +112,13 @@ class HTTPClientTransport(ClientTransport):
         return bytes_to_state_dict(resp.content)
 
     def get_global_model(self) -> StateDict:
-        start = time.monotonic()
+        # _round_start anchors the full round wall-clock so that wait_ms can be
+        # computed once submit_update() returns the new global model.
+        self._round_start = time.monotonic()
         resp = httpx.get(f"{self.server_url}/model", timeout=self.timeout)
         resp.raise_for_status()
         if self._stats is not None:
-            elapsed_ms = (time.monotonic() - start) * 1000
+            elapsed_ms = (time.monotonic() - self._round_start) * 1000
             self._stats.record_get_model(len(resp.content), elapsed_ms)
         return bytes_to_state_dict(resp.content)
 
@@ -131,6 +134,7 @@ class HTTPClientTransport(ClientTransport):
             timeout=None,
         )
         resp.raise_for_status()
+        submit_elapsed_ms = (time.monotonic() - submit_start) * 1000
         submitted_round = resp.json()["submitted_round"]
 
         # Poll until the server's round number advances past the round we submitted
@@ -146,8 +150,10 @@ class HTTPClientTransport(ClientTransport):
             if status["round"] > submitted_round:
                 result = self._fetch_global_model()
                 if self._stats is not None:
-                    elapsed_ms = (time.monotonic() - submit_start) * 1000
-                    self._stats.record_submit(len(data), elapsed_ms)
+                    self._stats.record_submit(len(data), submit_elapsed_ms)
+                    if self._round_start is not None:
+                        round_wall_ms = (time.monotonic() - self._round_start) * 1000
+                        self._stats.record_round_wall(round_wall_ms)
                 return result
             time.sleep(self.poll_interval)
 
