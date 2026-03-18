@@ -1,3 +1,4 @@
 [commands]
 up = "docker compose -f infra/compose.yml up"
 build = "docker compose -f infra/compose.yml build"
+run_sweep = "nohup uv run infra/scripts/run_sweep.py > sweep.out 2>&1 &"
