@@ -12,3 +12,4 @@ build/
 htmlcov/
 .DS_Store
 infra/compose.generated.yml
+results
