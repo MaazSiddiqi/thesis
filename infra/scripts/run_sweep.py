@@ -174,7 +174,7 @@ def build_sweep_matrix() -> List[Dict[str, Any]]:
     })
 
     # --- Scale experiments ---
-    for n in [5, 10]:
+    for n in [5, 7]:
         name = f"scale-{n}"
         experiments.append({
             "name": name,
