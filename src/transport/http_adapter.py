@@ -95,7 +95,7 @@ class HTTPClientTransport(ClientTransport):
     def __init__(
         self,
         server_url: str,
-        timeout: float = 300.0,
+        timeout: float = 900.0,
         poll_interval: float = 0.5,
         stats: Optional[StatsCollector] = None,
     ):
