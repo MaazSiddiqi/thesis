@@ -13,3 +13,6 @@ htmlcov/
 .DS_Store
 infra/compose.generated.yml
 results
+.sweep_pid
+sweep.out
+sweep_monitor.log
