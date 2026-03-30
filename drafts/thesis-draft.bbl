@@ -1,0 +1,86 @@
+\begin{thebibliography}{}
+
+\bibitem[Beutel et~al., 2020]{beutel2020flower}
+Beutel, D.~J., Tober, T., Dobre, D., Sber\v{c}, M., Becker, A., and Lane, N.
+  (2020).
+\newblock Flower: A friendly federated learning research framework.
+\newblock {\em arXiv preprint arXiv:2007.14390}.
+
+\bibitem[Bonawitz et~al., 2019]{tff}
+Bonawitz, K. et~al. (2019).
+\newblock Towards federated learning at scale: A system design.
+\newblock In {\em Proceedings of Machine Learning and Systems (MLSys)}.
+
+\bibitem[He et~al., 2016]{he2016deep}
+He, K., Zhang, X., Ren, S., and Sun, J. (2016).
+\newblock Deep residual learning for image recognition.
+\newblock In {\em Proceedings of the IEEE Conference on Computer Vision and
+  Pattern Recognition (CVPR)}, pages 770--778.
+
+\bibitem[Hsu et~al., 2019]{hsu2019measuring}
+Hsu, T.-M.~H., Qi, H., and Brown, M. (2019).
+\newblock Measuring the effects of non-identical data distribution for
+  federated visual classification.
+\newblock {\em arXiv preprint arXiv:1909.06335}.
+
+\bibitem[Kone\v{c}n\'{y} et~al., 2016]{konevcny2016federated}
+Kone\v{c}n\'{y}, J., McMahan, H.~B., Yu, F.~X., Richt\'{a}rik, P., Suresh,
+  A.~T., and Bacon, D. (2016).
+\newblock Federated learning: Strategies for improving communication
+  efficiency.
+\newblock {\em arXiv preprint arXiv:1610.05492}.
+
+\bibitem[Krizhevsky, 2009]{krizhevsky2009learning}
+Krizhevsky, A. (2009).
+\newblock Learning multiple layers of features from tiny images.
+\newblock Technical report, University of Toronto.
+
+\bibitem[Lai et~al., 2021]{lai2021oort}
+Lai, F., Zhu, X., Madhyastha, H.~V., and Zaharia, M. (2021).
+\newblock Oort: Efficient federated learning via guided participant selection.
+\newblock In {\em Proceedings of the 15th USENIX Symposium on Operating Systems
+  Design and Implementation (OSDI)}, pages 19--35.
+
+\bibitem[Li et~al., 2020a]{li2020federated}
+Li, T., Sahu, A.~K., Talwalkar, A., and Smith, V. (2020a).
+\newblock Federated learning: Challenges, methods, and future directions.
+\newblock {\em IEEE Signal Processing Magazine}, 37(3):50--60.
+
+\bibitem[Li et~al., 2020b]{li2020fedprox}
+Li, T., Sahu, A.~K., Zaheer, M., Sanjabi, M., Talwalkar, A., and Smith, V.
+  (2020b).
+\newblock Federated optimization in heterogeneous networks.
+\newblock In {\em Proceedings of Machine Learning and Systems (MLSys)}.
+
+\bibitem[Lim et~al., 2020]{lim2020federated}
+Lim, W. Y.~B. et~al. (2020).
+\newblock Federated learning in mobile edge networks: A comprehensive survey.
+\newblock {\em IEEE Communications Surveys \& Tutorials}, 22(3):2031--2063.
+
+\bibitem[McMahan et~al., 2017]{mcmahan2017communication}
+McMahan, B., Moore, E., Ramage, D., Hampson, S., and {y Arcas}, B.~A. (2017).
+\newblock Communication-efficient learning of deep networks from decentralized
+  data.
+\newblock In {\em Proceedings of the 20th International Conference on
+  Artificial Intelligence and Statistics (AISTATS)}, pages 1273--1282.
+
+\bibitem[Nishio and Yonetani, 2019]{nishio2019client}
+Nishio, T. and Yonetani, R. (2019).
+\newblock Client selection for federated learning with heterogeneous resources
+  in mobile edge.
+\newblock In {\em Proceedings of the IEEE International Conference on
+  Communications (ICC)}.
+
+\bibitem[{The ns-3 Consortium}, 2025]{ns3}
+{The ns-3 Consortium} (2025).
+\newblock The ns-3 network simulator.
+\newblock \url{https://www.nsnam.org}.
+\newblock Accessed 2025.
+
+\bibitem[Varga and Hornig, 2008]{omnetpp}
+Varga, A. and Hornig, R. (2008).
+\newblock An overview of the {OMNeT}++ simulation environment.
+\newblock In {\em Proceedings of the 1st International Conference on Simulation
+  Tools and Techniques (SIMUTools)}.
+
+\end{thebibliography}

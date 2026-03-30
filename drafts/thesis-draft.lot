@@ -2,16 +2,18 @@
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {4.1}{\ignorespaces Effect of the Dirichlet concentration parameter $\alpha $ on data distribution across clients.}}{15}{table.caption.5}%
-\contentsline {table}{\numberline {4.2}{\ignorespaces QoS parameter sweep space. Bold values indicate the baseline.}}{16}{table.caption.6}%
-\contentsline {table}{\numberline {4.3}{\ignorespaces Per-round metrics collected during each experiment.}}{17}{table.caption.7}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {5.1}{\ignorespaces FL server REST API.}}{22}{table.caption.8}%
+\contentsline {table}{\numberline {5.1}{\ignorespaces Effect of the Dirichlet concentration parameter $\alpha $ on data distribution across clients.}}{10}{table.caption.6}%
+\contentsline {table}{\numberline {5.2}{\ignorespaces QoS parameter sweep space. Bold values indicate the baseline.}}{11}{table.caption.7}%
+\contentsline {table}{\numberline {5.3}{\ignorespaces Per-round metrics collected during each experiment.}}{12}{table.caption.8}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {6.1}{\ignorespaces Theoretical minimum upload time per round at each bandwidth ($B_w = 44.8$~MB, $\rho = 0\%$). Download is unthrottled.}}{27}{table.caption.9}%
-\contentsline {table}{\numberline {6.2}{\ignorespaces Effect of packet loss on round duration and retransmission overhead ($\beta = 100$~Mbps, $\tau = 5$~ms). \textbf {[Populate with experimental data.]}}}{32}{table.caption.14}%
-\contentsline {table}{\numberline {6.3}{\ignorespaces Scaling summary: mean round duration and final accuracy.}}{33}{table.caption.16}%
-\contentsline {table}{\numberline {6.4}{\ignorespaces Straggler experiment: per-client timing and accuracy breakdown (averaged over 20 rounds).}}{34}{table.caption.17}%
-\contentsline {table}{\numberline {6.5}{\ignorespaces Summary of QoS impact on FL performance (ResNet-18, CIFAR-10, $K=3$ clients, 20 rounds unless noted).}}{35}{table.caption.18}%
+\contentsline {table}{\numberline {6.1}{\ignorespaces FL server REST API.}}{17}{table.caption.9}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {7.1}{\ignorespaces Theoretical minimum upload time per round at each bandwidth ($B_w = 44.8$~MB, $\rho = 0\%$). Download is unthrottled.}}{20}{table.caption.10}%
+\contentsline {table}{\numberline {7.2}{\ignorespaces Effect of packet loss on round duration and retransmission overhead ($\beta = 100$~Mbps, $\tau = 5$~ms).}}{24}{table.caption.15}%
+\contentsline {table}{\numberline {7.3}{\ignorespaces Scaling summary: mean round duration and final accuracy.}}{26}{table.caption.17}%
+\contentsline {table}{\numberline {7.4}{\ignorespaces Straggler experiment: per-client timing and accuracy breakdown (averaged over 20 rounds).}}{26}{table.caption.18}%
+\contentsline {table}{\numberline {7.5}{\ignorespaces Summary of QoS impact on FL performance (ResNet-18, CIFAR-10, $K=3$ clients, 20 rounds unless noted).}}{27}{table.caption.19}%
+\addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
